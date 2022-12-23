@@ -1,4 +1,4 @@
-package configs;
+package org.example.configs;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
