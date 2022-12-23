@@ -1,7 +1,7 @@
-package lib;
+package org.example.lib;
 
-import configs.HikariCPDataSource;
-import configs.PropertyConfiguration;
+import org.example.configs.HikariCPDataSource;
+import org.example.configs.PropertyConfiguration;
 
 import javax.sql.DataSource;
 import java.nio.file.Path;

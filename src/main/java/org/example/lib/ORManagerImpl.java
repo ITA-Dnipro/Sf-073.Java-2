@@ -1,4 +1,4 @@
-package lib;
+package org.example.lib;
 
 import java.sql.Connection;
 
