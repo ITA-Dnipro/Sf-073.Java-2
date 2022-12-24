@@ -1,4 +1,4 @@
-package org.example.configs;
+package configs;
 
 public class HikariCPDataSourceTest {
 }

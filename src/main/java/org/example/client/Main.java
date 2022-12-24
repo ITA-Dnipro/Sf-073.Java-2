@@ -7,11 +7,19 @@ import org.example.lib.ORManager;
 import org.example.lib.ORManagerImpl;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 
 public class Main {
     public static void main(String[] args) throws SQLException, IllegalAccessException {
-        ORManagerImpl ormManager = (ORManagerImpl) ORManager.withDataSource(new HikariDataSource());
 
-        ormManager.register(Book.class, Publisher.class);
+        ORManager orManager = ORManager.withDataSource(new HikariDataSource());
+
+        orManager.register(Book.class, Publisher.class);
+
+        Book book2 = new Book("Just Book", LocalDate.now());
+        Publisher publisher2 = new Publisher("Just Publisher");
+
+        orManager.persist(book2);
+        orManager.persist(publisher2);
     }
 }
