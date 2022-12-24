@@ -7,8 +7,9 @@ import org.example.lib.annotation.Table;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ public class ORManagerImpl implements ORManager {
     private static final String NAME = " VARCHAR(255) UNIQUE NOT NULL";
     private static final String DATE = " DATE NOT NULL";
     private static final String INT = " INT NOT NULL";
+    private static final String FIND_ALL = "SELECT * FROM ";
 
     private final Connection connection;
 
@@ -36,7 +38,7 @@ public class ORManagerImpl implements ORManager {
     }
 
     @Override
-    public void register(Class<?>... entityClasses) throws SQLException, IllegalAccessException {
+    public void register(Class<?>... entityClasses) throws Exception {
         for (Class<?> cls : entityClasses) {
 
             if (cls.isAnnotationPresent(Entity.class)) {
@@ -48,16 +50,14 @@ public class ORManagerImpl implements ORManager {
                 for (Field field : declaredFields) {
                     Class<?> fieldType = field.getType();
                     if (field.isAnnotationPresent(Id.class)) {
-                        String name = field.getName();
-                        getColumnName(sql, fieldType, name);
+                        setColumnType(sql, fieldType, getFieldName(field));
                     } else if (field.isAnnotationPresent(Column.class)) {
-                        String name = getFieldName(field);
-                        getColumnName(sql, fieldType, name);
+                        setColumnType(sql, fieldType, getFieldName(field));
                     }
                 }
 
                 String sqlCreateTable = String.format("%s %s(%s);", CREATE_TABLE, tableName,
-                        String.join(", ", sql));
+                                                      String.join(", ", sql));
 
                 try (var prepStmt = getConnection().prepareStatement(sqlCreateTable)) {
                     prepStmt.executeUpdate();
@@ -67,7 +67,7 @@ public class ORManagerImpl implements ORManager {
     }
 
 
-    private void getColumnName(ArrayList<String> sql, Class<?> type, String name) {
+    private void setColumnType(ArrayList<String> sql, Class<?> type, String name) {
         if (type == Long.class) {
             sql.add(name + ID);
         }
@@ -81,11 +81,13 @@ public class ORManagerImpl implements ORManager {
     }
 
     private String getFieldName(Field field) {
-        String name = field.getAnnotation(Column.class).name();
-        if (name.equals("")) {
-            name = field.getName();
+        if (field.isAnnotationPresent(Column.class)) {
+            String name = field.getAnnotation(Column.class).name();
+            if (!name.equals("")) {
+                return name;
+            }
         }
-        return name;
+        return field.getName();
     }
 
     public static String getTableName(Class<?> cls) {
@@ -131,17 +133,17 @@ public class ORManagerImpl implements ORManager {
 
     private String getFieldsWithoutId(Object o) {
         return Arrays.stream(o.getClass()
-                        .getDeclaredFields())
-                .filter(f -> f.getDeclaredAnnotation(Column.class) != null)
-                .map(f -> {
-                    String name = f.getAnnotation(Column.class).name();
-                    if (!name.equals("")) {
-                        return name;
-                    } else {
-                        return f.getName();
-                    }
-                })
-                .collect(Collectors.joining(","));
+                              .getDeclaredFields())
+                     .filter(f -> f.getDeclaredAnnotation(Column.class) != null)
+                     .map(f -> {
+                         String name = f.getAnnotation(Column.class).name();
+                         if (!name.equals("")) {
+                             return name;
+                         } else {
+                             return f.getName();
+                         }
+                     })
+                     .collect(Collectors.joining(","));
     }
 
     @Override
@@ -150,8 +152,44 @@ public class ORManagerImpl implements ORManager {
     }
 
     @Override
-    public <T> List<T> findAll(Class<T> cls) throws SQLException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        return null;
+    public <T> List<T> findAll(Class<T> cls) throws Exception {
+        List<T> result = new ArrayList<>();
+
+        String sql = FIND_ALL + cls.getSimpleName() + ";";
+        PreparedStatement preparedStatement = getConnection().prepareStatement(sql);
+        ResultSet resultSet = preparedStatement.executeQuery();
+
+        while (resultSet.next()) {
+
+            T obj = cls.getConstructor().newInstance();
+
+            Field[] declaredFields = obj.getClass().getDeclaredFields();
+
+            for (Field field : declaredFields) {
+
+                if (!field.isAnnotationPresent(Id.class) && !field.isAnnotationPresent(Column.class)) {
+                    continue;
+                }
+
+                String name = getFieldName(field);
+                String value = resultSet.getString(name);
+
+                field.setAccessible(true);
+                setFieldValue(obj, field, value);
+            }
+            result.add(obj);
+        }
+        return result;
+    }
+
+    private <T> void setFieldValue(T obj, Field field, String value) throws IllegalAccessException {
+        if (field.getType() == Long.class) {
+            field.set(obj, Long.parseLong(value));
+        } else if (field.getType() == String.class) {
+            field.set(obj, value);
+        } else if (field.getType() == LocalDate.class) {
+            field.set(obj, LocalDate.parse(value));
+        }
     }
 
     @Override
