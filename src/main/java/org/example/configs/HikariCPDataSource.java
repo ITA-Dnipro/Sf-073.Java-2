@@ -2,6 +2,7 @@ package org.example.configs;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import org.example.lib.utils.Constants;
 
 import javax.sql.DataSource;
 import java.nio.file.Path;
@@ -9,7 +10,7 @@ import java.util.Properties;
 
 public class HikariCPDataSource {
 
-    private static final Path path = Path.of("orm.properties");
+    private static final Path path = Path.of(Constants.Connection.PROPERTIES_FILE_NAME);
     private static final Properties properties = PropertyConfiguration.readPropertiesFromFile(path);
     private static final HikariConfig hikariConfig = new HikariConfig();
 
@@ -17,9 +18,9 @@ public class HikariCPDataSource {
 
     public static DataSource getHikariDatasourceConfiguration(DataSource dataSource){
         hikariConfig.setDriverClassName(getDriverClassNameFromConfiguration());
-        hikariConfig.setJdbcUrl(String.valueOf(properties.getProperty("orm.connection.url")));
-        hikariConfig.setUsername(String.valueOf(properties.getProperty("orm.connection.username")));
-        hikariConfig.setPassword(String.valueOf(properties.getProperty("orm.connection.password")));
+        hikariConfig.setJdbcUrl(String.valueOf(properties.getProperty(Constants.Connection.URL)));
+        hikariConfig.setUsername(String.valueOf(properties.getProperty(Constants.Connection.USERNAME)));
+        hikariConfig.setPassword(String.valueOf(properties.getProperty(Constants.Connection.PASSWORD)));
         hikariConfig.addDataSourceProperty("cachePrepStmts", "true");
         hikariConfig.addDataSourceProperty("prepStmtCacheSize", "250");
         hikariConfig.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
@@ -29,14 +30,14 @@ public class HikariCPDataSource {
     }
 
     private static String getDriverClassNameFromConfiguration() {
-        String connectionDriver = HikariCPDataSource.properties.getProperty("orm.connection.driver");
+        String connectionDriver = HikariCPDataSource.properties.getProperty(Constants.Connection.DRIVER);
         switch (connectionDriver) {
             case "h2.Driver":
-                return "org.h2.Driver";
+                return Constants.Connection.H2_DRIVER_CLASS_NAME;
             case "mysql.Driver":
-                return "com.mysql.jdbc.Driver";
+                return Constants.Connection.MYSQL_DRIVER_CLASS_NAME;
             case "postgresql.Driver":
-                return "org.postgresql.Driver";
+                return Constants.Connection.POSTGRES_DRIVER_CLASS_NAME;
             default:
                 throw new IllegalArgumentException("no such driver predefined property!");
         }
