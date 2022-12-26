@@ -7,6 +7,7 @@ import org.example.lib.annotation.Table;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -57,7 +58,7 @@ public class ORManagerImpl implements ORManager {
                 }
 
                 String sqlCreateTable = String.format("%s %s(%s);", CREATE_TABLE, tableName,
-                                                      String.join(", ", sql));
+                        String.join(", ", sql));
 
                 try (var prepStmt = getConnection().prepareStatement(sqlCreateTable)) {
                     prepStmt.executeUpdate();
@@ -133,22 +134,84 @@ public class ORManagerImpl implements ORManager {
 
     private String getFieldsWithoutId(Object o) {
         return Arrays.stream(o.getClass()
-                              .getDeclaredFields())
-                     .filter(f -> f.getDeclaredAnnotation(Column.class) != null)
-                     .map(f -> {
-                         String name = f.getAnnotation(Column.class).name();
-                         if (!name.equals("")) {
-                             return name;
-                         } else {
-                             return f.getName();
-                         }
-                     })
-                     .collect(Collectors.joining(","));
+                        .getDeclaredFields())
+                .filter(f -> f.getDeclaredAnnotation(Column.class) != null)
+                .map(f -> {
+                    String name = f.getAnnotation(Column.class).name();
+                    if (!name.equals("")) {
+                        return name;
+                    } else {
+                        return f.getName();
+                    }
+                })
+                .collect(Collectors.joining(","));
     }
 
     @Override
-    public <T> Optional<T> findById(Serializable id, Class<T> cls) {
-        return Optional.empty();
+    public <T> Optional<T> findById(Serializable id, Class<T> cls) throws SQLException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+
+        String tableName = getTableName(cls);
+
+        String sql = String.format("SELECT * FROM %s WHERE id = %s;", tableName, id);
+
+        ResultSet resultSet = connection.prepareStatement(sql).executeQuery();
+
+        return createEntity(cls, resultSet);
+
+    }
+
+    private <T> Optional<T> createEntity(Class<T> cls, ResultSet resultSet) throws SQLException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+
+        if (!resultSet.next()) {
+            return Optional.empty();
+        }
+
+        String fieldName;
+
+        T entity = cls.getDeclaredConstructor().newInstance();
+
+        Field[] declaredFields = cls.getDeclaredFields();
+        for (Field declaredField : declaredFields) {
+
+            if (!declaredField.isAnnotationPresent(Column.class) &&
+                    !declaredField.isAnnotationPresent(Id.class)) {
+                continue;
+            }
+            Column columnAnnotation = declaredField.getAnnotation(Column.class);
+
+            if (columnAnnotation == null) {
+                fieldName = declaredField.getName();
+            } else if (!columnAnnotation.name().equals("")) {
+                fieldName = columnAnnotation.name();
+            } else {
+                fieldName = declaredField.getName();
+            }
+
+            String value = resultSet.getString(fieldName);
+            entity = fillData(entity, declaredField, value);
+        }
+        return Optional.of(entity);
+    }
+
+    private <T> T fillData(T entity, Field field, String value) throws IllegalAccessException {
+        field.setAccessible(true);
+
+        if (field.getType() == long.class || field.getType() == Long.class) {
+            field.set(entity, Long.parseLong(value));
+
+        } else if (field.getType() == int.class || field.getType() == Integer.class) {
+            field.set(entity, Integer.parseInt(value));
+
+        } else if (field.getType() == LocalDate.class) {
+            field.set(entity, LocalDate.parse(value));
+
+        } else if (field.getType() == String.class) {
+            field.set(entity, value);
+
+        } else {
+            throw new RuntimeException("Unsupported type " + field.getType());
+        }
+        return entity;
     }
 
     @Override

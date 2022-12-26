@@ -7,6 +7,7 @@ import org.example.lib.ORManager;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public class Main {
     public static void main(String[] args) throws Exception {
@@ -20,23 +21,29 @@ public class Main {
         Book book3 = new Book("aaaaaaaa", LocalDate.of(1961, 1, 1));
         Book book4 = new Book("bbbbbbbb", LocalDate.of(1961, 1, 1));
 
-        orManager.persist(book1);
-        orManager.persist(book2);
-        orManager.persist(book3);
-        orManager.persist(book4);
+//        orManager.persist(book1);
+//        orManager.persist(book2);
+//        orManager.persist(book3);
+//        orManager.persist(book4);
 
         Publisher publisher1 = new Publisher("Just Publisher");
         Publisher publisher2 = new Publisher("MyPub1");
         Publisher publisher3 = new Publisher("MyPub2");
         Publisher publisher4 = new Publisher("MyPub3");
 
-        orManager.persist(publisher1);
-        orManager.persist(publisher2);
-        orManager.persist(publisher3);
-        orManager.persist(publisher4);
+//        orManager.persist(publisher1);
+//        orManager.persist(publisher2);
+//        orManager.persist(publisher3);
+//        orManager.persist(publisher4);
 
+        System.out.println("Find All Books");
         orManager.findAll(Book.class).forEach(System.out::println);
-        System.out.println();
+
+        System.out.println("Find All Publishers");
         orManager.findAll(Publisher.class).forEach(System.out::println);
+
+        System.out.println("Find Book and Publisher by ID");
+        System.out.println(orManager.findById(1, Book.class));
+        System.out.println(orManager.findById(1, Publisher.class));
     }
 }
