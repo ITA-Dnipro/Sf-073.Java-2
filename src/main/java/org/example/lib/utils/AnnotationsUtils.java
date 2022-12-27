@@ -1,17 +1,13 @@
-package org.example.lib;
+package org.example.lib.utils;
 
 import org.example.lib.annotation.Column;
 import org.example.lib.annotation.Entity;
 import org.example.lib.annotation.Id;
 import org.example.lib.annotation.Table;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Field;
-import java.nio.file.Path;
-import java.util.Properties;
 
-public class Utils {
+public class AnnotationsUtils {
 
     public static boolean entityAnnotationIsPresent(Class<?> cls) {
         return cls.isAnnotationPresent(Entity.class);

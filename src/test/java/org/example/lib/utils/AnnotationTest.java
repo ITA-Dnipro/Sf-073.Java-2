@@ -1,4 +1,4 @@
-package org.example.lib;
+package org.example.lib.utils;
 
 import org.example.lib.annotation.Column;
 import org.example.lib.annotation.Entity;
@@ -18,7 +18,7 @@ public class AnnotationTest {
         class WithEntity {
         }
 
-        var res = Utils.entityAnnotationIsPresent(WithEntity.class);
+        var res = AnnotationsUtils.entityAnnotationIsPresent(WithEntity.class);
 
         assertTrue(res);
     }
@@ -29,7 +29,7 @@ public class AnnotationTest {
         class WithoutEntity {
         }
 
-        var res = Utils.entityAnnotationIsPresent(WithoutEntity.class);
+        var res = AnnotationsUtils.entityAnnotationIsPresent(WithoutEntity.class);
 
         assertFalse(res);
     }
@@ -42,7 +42,7 @@ public class AnnotationTest {
         class WithoutTableAnnotation {
         }
 
-        var res = Utils.getTableName(WithoutTableAnnotation.class);
+        var res = AnnotationsUtils.getTableName(WithoutTableAnnotation.class);
 
         assertEquals("WithoutTableAnnotation", res);
     }
@@ -55,7 +55,7 @@ public class AnnotationTest {
         class WithTableAnnotation {
         }
 
-        var res = Utils.getTableName(WithTableAnnotation.class);
+        var res = AnnotationsUtils.getTableName(WithTableAnnotation.class);
 
         assertEquals("with_table_annotation", res);
     }
@@ -66,7 +66,7 @@ public class AnnotationTest {
         class WithoutIdField {
         }
 
-        var res = Utils.getIdField(WithoutIdField.class);
+        var res = AnnotationsUtils.getIdField(WithoutIdField.class);
 
         assertNull(res);
 
@@ -80,7 +80,7 @@ public class AnnotationTest {
             Long id;
         }
 
-        var res = Utils.getIdField(WithoutIdField.class);
+        var res = AnnotationsUtils.getIdField(WithoutIdField.class);
 
         assertNotNull(res);
     }
@@ -92,7 +92,7 @@ public class AnnotationTest {
             @Id
             Long id;
         }
-        FieldInfo fieldInfo = Utils.getIdField(WithoutIdField.class);
+        FieldInfo fieldInfo = AnnotationsUtils.getIdField(WithoutIdField.class);
 
         String columnName = fieldInfo.getColumnName();
 
@@ -109,7 +109,7 @@ public class AnnotationTest {
         }
 
         String expectedColumnName = "id_column";
-        FieldInfo fieldInfo = Utils.getIdField(WithColumn.class);
+        FieldInfo fieldInfo = AnnotationsUtils.getIdField(WithColumn.class);
         String columnName = fieldInfo.getColumnName();
 
         assertEquals(expectedColumnName, columnName);
@@ -129,7 +129,7 @@ public class AnnotationTest {
                 );
                 """;
 
-        String res = Utils.createTableDdl(MinimalEntity.class);
+        String res = AnnotationsUtils.createTableDdl(MinimalEntity.class);
         
         assertThat(res.toLowerCase()).isEqualToIgnoringWhitespace(expectedDdl.toLowerCase());
     }
