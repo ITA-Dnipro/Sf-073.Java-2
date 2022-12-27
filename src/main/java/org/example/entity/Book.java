@@ -55,6 +55,10 @@ public class Book {
         this.publisher = publisher;
     }
 
+    private void setId(Long id) {
+        this.id = id;
+    }
+
     @Override
     public String toString() {
         return new StringJoiner(", ", Book.class.getSimpleName() + "[", "]")

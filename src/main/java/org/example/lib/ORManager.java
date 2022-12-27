@@ -43,7 +43,7 @@ public interface ORManager {
     void persist(Object o) throws SQLException, IllegalAccessException;
 
     // READ
-    <T> Optional<T> findById(Serializable id, Class<T> cls);
+    <T> Optional<T> findById(Serializable id, Class<T> cls) throws SQLException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException;
 
     // READ ALL
     <T> List<T> findAll(Class<T> cls) throws Exception;
