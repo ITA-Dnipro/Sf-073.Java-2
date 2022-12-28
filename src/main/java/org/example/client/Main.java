@@ -30,7 +30,7 @@ public class Main {
         Publisher publisher2 = new Publisher("MyPub1");
         Publisher publisher3 = new Publisher("MyPub2");
         Publisher publisher4 = new Publisher("MyPub3");
-
+//
 //        orManager.persist(publisher1);
 //        orManager.persist(publisher2);
 //        orManager.persist(publisher3);
@@ -38,9 +38,11 @@ public class Main {
 
         System.out.println("Find All Books");
         orManager.findAll(Book.class).forEach(System.out::println);
+        System.out.println();
 
         System.out.println("Find All Publishers");
         orManager.findAll(Publisher.class).forEach(System.out::println);
+        System.out.println();
 
         System.out.println("Find Book and Publisher by ID");
         System.out.println(orManager.findById(1, Book.class));

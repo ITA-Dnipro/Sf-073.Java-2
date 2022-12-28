@@ -223,7 +223,6 @@ public class ORManagerImpl implements ORManager {
         ResultSet resultSet = preparedStatement.executeQuery();
 
         while (resultSet.next()) {
-
             T obj = cls.getConstructor().newInstance();
 
             Field[] declaredFields = obj.getClass().getDeclaredFields();
@@ -238,26 +237,16 @@ public class ORManagerImpl implements ORManager {
                 String value = resultSet.getString(name);
 
                 field.setAccessible(true);
-                setFieldValue(obj, field, value);
+                fillData(obj, field, value);
             }
             result.add(obj);
         }
         return result;
     }
 
-    private <T> void setFieldValue(T obj, Field field, String value) throws IllegalAccessException {
-        if (field.getType() == Long.class) {
-            field.set(obj, Long.parseLong(value));
-        } else if (field.getType() == String.class) {
-            field.set(obj, value);
-        } else if (field.getType() == LocalDate.class) {
-            field.set(obj, LocalDate.parse(value));
-        }
-    }
-
     @Override
-    public <T> Iterable<T> findAllAsIterable(Class<T> cls) {
-        return null;
+    public <T> Iterable<T> findAllAsIterable(Class<T> cls) throws Exception {
+        return findAll(cls);
     }
 
     @Override
