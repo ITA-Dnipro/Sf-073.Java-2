@@ -7,14 +7,14 @@ import java.util.List;
 import java.util.StringJoiner;
 
 @Entity
-@Table()
+@Table(name = "publishers")
 public class Publisher {
     @Id
     private Long id;
     @Column()
     private String name;
 
-    @OneToMany(mappedBy = "publisher_id")
+    @OneToMany(mappedBy = "publisher")
     private List<Book> books;
 
     public Publisher() {

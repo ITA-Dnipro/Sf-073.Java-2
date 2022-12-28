@@ -1,9 +1,6 @@
 package org.example.lib;
 
-import org.example.lib.annotation.Column;
-import org.example.lib.annotation.Entity;
-import org.example.lib.annotation.Id;
-import org.example.lib.annotation.Table;
+import org.example.lib.annotation.*;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
@@ -25,8 +22,9 @@ public class ORManagerImpl implements ORManager {
     private static final String ID = " BIGINT PRIMARY KEY AUTO_INCREMENT";
     private static final String NAME = " VARCHAR(255) UNIQUE NOT NULL";
     private static final String DATE = " DATE NOT NULL";
-    private static final String INT = " INT NOT NULL";
+    private static final String INT = " BIGINT NOT NULL";
     private static final String FIND_ALL = "SELECT * FROM ";
+    private static final String FOREIGN_KEY = " FOREIGN KEY (%s) REFERENCES %s(%s)";
 
     private final Connection connection;
 
@@ -54,11 +52,15 @@ public class ORManagerImpl implements ORManager {
                         setColumnType(sql, fieldType, getFieldName(field));
                     } else if (field.isAnnotationPresent(Column.class)) {
                         setColumnType(sql, fieldType, getFieldName(field));
+                    } else if (field.isAnnotationPresent(ManyToOne.class)) {
+                        String fieldName = getFieldName(field);
+                        sql.add(fieldName + " BIGINT");
+                        sql.add(String.format(FOREIGN_KEY, fieldName, field.getName() + "s", "id"));
                     }
                 }
 
                 String sqlCreateTable = String.format("%s %s(%s);", CREATE_TABLE, tableName,
-                        String.join(", ", sql));
+                                                      String.join(", ", sql));
 
                 try (var prepStmt = getConnection().prepareStatement(sqlCreateTable)) {
                     prepStmt.executeUpdate();
@@ -84,6 +86,11 @@ public class ORManagerImpl implements ORManager {
     private String getFieldName(Field field) {
         if (field.isAnnotationPresent(Column.class)) {
             String name = field.getAnnotation(Column.class).name();
+            if (!name.equals("")) {
+                return name;
+            }
+        } else if (field.isAnnotationPresent(ManyToOne.class)) {
+            String name = field.getAnnotation(ManyToOne.class).columnName();
             if (!name.equals("")) {
                 return name;
             }
@@ -134,17 +141,17 @@ public class ORManagerImpl implements ORManager {
 
     private String getFieldsWithoutId(Object o) {
         return Arrays.stream(o.getClass()
-                        .getDeclaredFields())
-                .filter(f -> f.getDeclaredAnnotation(Column.class) != null)
-                .map(f -> {
-                    String name = f.getAnnotation(Column.class).name();
-                    if (!name.equals("")) {
-                        return name;
-                    } else {
-                        return f.getName();
-                    }
-                })
-                .collect(Collectors.joining(","));
+                              .getDeclaredFields())
+                     .filter(f -> f.getDeclaredAnnotation(Column.class) != null)
+                     .map(f -> {
+                         String name = f.getAnnotation(Column.class).name();
+                         if (!name.equals("")) {
+                             return name;
+                         } else {
+                             return f.getName();
+                         }
+                     })
+                     .collect(Collectors.joining(","));
     }
 
     @Override
@@ -218,7 +225,7 @@ public class ORManagerImpl implements ORManager {
     public <T> List<T> findAll(Class<T> cls) throws Exception {
         List<T> result = new ArrayList<>();
 
-        String sql = FIND_ALL + cls.getSimpleName() + ";";
+        String sql = FIND_ALL + getTableName(cls) + ";";
         PreparedStatement preparedStatement = getConnection().prepareStatement(sql);
         ResultSet resultSet = preparedStatement.executeQuery();
 

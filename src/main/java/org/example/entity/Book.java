@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.util.StringJoiner;
 
 @Entity
-@Table(name = "book")
+@Table(name = "books")
 public class Book {
     @Id
     private Long id;
@@ -16,7 +16,7 @@ public class Book {
     private LocalDate publishedAt;
 
     // 2nd stage:
-    @ManyToOne()
+    @ManyToOne(columnName = "publisher_id")
     Publisher publisher = null;
 
     public Book() {
