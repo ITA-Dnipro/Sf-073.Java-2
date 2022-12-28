@@ -1,22 +1,13 @@
 package org.example.lib;
 
-import org.example.lib.annotation.Column;
-import org.example.lib.annotation.Entity;
-import org.example.lib.annotation.Id;
-import org.example.lib.annotation.Table;
+import org.example.lib.annotation.*;
+import org.example.lib.utils.*;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class ORManagerImpl implements ORManager {
@@ -42,7 +33,7 @@ public class ORManagerImpl implements ORManager {
         for (Class<?> cls : entityClasses) {
 
             if (cls.isAnnotationPresent(Entity.class)) {
-                String tableName = getTableName(cls);
+                String tableName = EntityUtils.getTableName(cls);
 
                 Field[] declaredFields = cls.getDeclaredFields();
                 ArrayList<String> sql = new ArrayList<>();
@@ -50,9 +41,9 @@ public class ORManagerImpl implements ORManager {
                 for (Field field : declaredFields) {
                     Class<?> fieldType = field.getType();
                     if (field.isAnnotationPresent(Id.class)) {
-                        setColumnType(sql, fieldType, getFieldName(field));
+                        setColumnType(sql, fieldType, EntityUtils.getFieldName(field));
                     } else if (field.isAnnotationPresent(Column.class)) {
-                        setColumnType(sql, fieldType, getFieldName(field));
+                        setColumnType(sql, fieldType, EntityUtils.getFieldName(field));
                     }
                 }
 
@@ -80,71 +71,48 @@ public class ORManagerImpl implements ORManager {
         }
     }
 
-    private String getFieldName(Field field) {
-        if (field.isAnnotationPresent(Column.class)) {
-            String name = field.getAnnotation(Column.class).name();
-            if (!name.equals("")) {
-                return name;
-            }
-        }
-        return field.getName();
-    }
-
-    public static String getTableName(Class<?> cls) {
-        if (cls.isAnnotationPresent(Table.class)) {
-            String name = cls.getAnnotation(Table.class).name();
-            if (!name.equals("")) {
-                return name;
-            }
-        }
-        return cls.getSimpleName();
-    }
 
     @Override
-    public <T> T save(T o) throws SQLException {
+    public <T> T save(T o) {
+        long id = 0L;
+        if(!EntityUtils.hasId(o)){
+            try (PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, o.getClass(), connection),
+                    Statement.RETURN_GENERATED_KEYS)) {
+                statement.executeUpdate();
+                ResultSet keys = statement.getGeneratedKeys();
+                while(keys.next()){
+                    id = keys.getLong("id");
+                }
+                try (PreparedStatement statement1 = connection.prepareStatement(SqlUtils.findByIdQuery(id, o.getClass()))) {
+                    ResultSet resultSet = statement1.executeQuery();
+                    while(resultSet.next()){
+            //TODO map resultSet to T o
+                    }
+                }
+            } catch (SQLException | IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }else{
+            long entityId = EntityUtils.getId(o);
+            //TODO implement insert with update
+        }
+
+
+
         return null;
     }
 
     @Override
     public void persist(Object o) throws SQLException, IllegalAccessException {
-        String tableName = getTableName(o.getClass());
-        String fieldList = getFieldsWithoutId(o);
-        String valueList = getValues(o);
+        String tableName = EntityUtils.getTableName(o.getClass());
+        String fieldList = EntityUtils.getFieldsWithoutId(o);
+        String valueList = EntityUtils.getFieldValues(o);
 
         String sql = String.format("INSERT INTO %s (%s) VALUES (%s)", tableName, fieldList, valueList);
 
         this.connection.prepareStatement(sql).execute();
     }
 
-    private String getValues(Object o) throws IllegalAccessException {
-        Field[] declaredFields = o.getClass().getDeclaredFields();
-
-        List<String> result = new ArrayList<>();
-
-        for (Field declaredField : declaredFields) {
-            if (declaredField.getAnnotation(Column.class) != null) {
-                declaredField.setAccessible(true);
-                Object value = declaredField.get(o);
-                result.add("'" + value.toString() + "'");
-            }
-        }
-        return String.join(",", result);
-    }
-
-    private String getFieldsWithoutId(Object o) {
-        return Arrays.stream(o.getClass()
-                              .getDeclaredFields())
-                     .filter(f -> f.getDeclaredAnnotation(Column.class) != null)
-                     .map(f -> {
-                         String name = f.getAnnotation(Column.class).name();
-                         if (!name.equals("")) {
-                             return name;
-                         } else {
-                             return f.getName();
-                         }
-                     })
-                     .collect(Collectors.joining(","));
-    }
 
     @Override
     public <T> Optional<T> findById(Serializable id, Class<T> cls) {
@@ -171,7 +139,7 @@ public class ORManagerImpl implements ORManager {
                     continue;
                 }
 
-                String name = getFieldName(field);
+                String name = EntityUtils.getFieldName(field);
                 String value = resultSet.getString(name);
 
                 field.setAccessible(true);
