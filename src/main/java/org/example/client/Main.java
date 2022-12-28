@@ -18,8 +18,8 @@ public class Main {
 
         Book book1 = new Book("Solaris", LocalDate.of(1961, 1, 1));
         Book book2 = new Book("Just Book", LocalDate.now());
-        Book book3 = new Book("aaaaaaaa", LocalDate.of(1961, 1, 1));
-        Book book4 = new Book("bbbbbbbb", LocalDate.of(1961, 1, 1));
+        Book book3 = new Book("Just Book 2", LocalDate.of(1961, 1, 1));
+        Book book4 = new Book("Just Book 3", LocalDate.of(1961, 1, 1));
 
 //        orManager.persist(book1);
 //        orManager.persist(book2);
