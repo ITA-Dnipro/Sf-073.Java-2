@@ -253,7 +253,7 @@ public class ORManagerImpl implements ORManager {
 
     @Override
     public <T> Iterable<T> findAllAsIterable(Class<T> cls) throws Exception {
-        return findAll(cls);
+        return null;
     }
 
     @Override
