@@ -3,6 +3,7 @@ package org.example.lib;
 import org.example.lib.annotation.*;
 import org.example.lib.utils.*;
 
+import javax.sql.DataSource;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -92,15 +93,14 @@ public class ORManagerImpl implements ORManager {
                 while(keys.next()){
                     id = keys.getLong("id");
                 }
-                try (PreparedStatement statement1 = connection.prepareStatement(SqlUtils.findByIdQuery(id, o.getClass()))) {
-                    ResultSet resultSet = statement1.executeQuery();
-                    while(resultSet.next()){
-                    Optional<?> optionalRecord = findById(id, o.getClass());
-                    newRecord = (T) optionalRecord.orElse(null);
-                    }
+                Optional<?> optionalRecord = null;
+                try {
+                    optionalRecord = findById(id, o.getClass());
                 } catch (Exception e) {
                     e.printStackTrace();
+                    throw new SQLException("Exception from findById when saving new entity!");
                 }
+                newRecord = (T) optionalRecord.orElse(null);
             } catch (SQLException | IllegalAccessException e) {
                 e.printStackTrace();
             }
