@@ -62,6 +62,29 @@ public class EntityUtils {
                 .collect(Collectors.joining(","));
     }
 
+    public static List<Object> getFieldValuesWithManyToOne(Object o) throws IllegalAccessException {
+        Field[] declaredFields = o.getClass().getDeclaredFields();
+
+        List<Object> result = new ArrayList<>();
+
+        for (Field declaredField : declaredFields) {
+            if (declaredField.getAnnotation(Column.class) != null) {
+                declaredField.setAccessible(true);
+                Object value = declaredField.get(o);
+                result.add("'" + value.toString() + "'");
+                result.add(",");
+            }
+            if(declaredField.isAnnotationPresent(ManyToOne.class)){
+                declaredField.setAccessible(true);
+                Object value = declaredField.get(o);
+                result.add(value);
+                result.add(",");
+            }
+        }
+        result.remove(result.size()-1);
+        return result;
+    }
+
     public static <T> boolean hasId(T o) {
         boolean isEntity = o.getClass().isAnnotationPresent(Entity.class);
         Long id = null;
