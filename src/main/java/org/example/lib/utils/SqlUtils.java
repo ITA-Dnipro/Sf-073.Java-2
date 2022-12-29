@@ -10,13 +10,13 @@ public class SqlUtils {
     public static String saveQuery(Object o, Class<?> cls, Connection connection) throws IllegalAccessException {
         return "INSERT INTO " +
                 EntityUtils.getTableName(cls) +
-                " ( " +
+                " (" +
                 getColumnNamesInsert(EntityUtils.getTableName(cls), connection) +
-                " ) " +
+                ") " +
                 " VALUES " +
-                " ( " +
+                " (" +
                 EntityUtils.getFieldValues(o) +
-                " ) ";
+                ")";
     }
 
     public static String findByIdQuery(Long id, Class<?> cls){
