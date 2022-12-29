@@ -22,7 +22,7 @@ public class ORManagerImpl implements ORManager {
     private static final String ID = " BIGINT PRIMARY KEY AUTO_INCREMENT";
     private static final String NAME = " VARCHAR(255) UNIQUE NOT NULL";
     private static final String DATE = " DATE NOT NULL";
-    private static final String INT = " BIGINT NOT NULL";
+    private static final String LONG = " BIGINT NOT NULL";
     private static final String FIND_ALL = "SELECT * FROM ";
     private static final String FOREIGN_KEY = " FOREIGN KEY (%s) REFERENCES %s(%s)";
 
@@ -54,6 +54,7 @@ public class ORManagerImpl implements ORManager {
                         setColumnType(sql, fieldType, getFieldName(field));
                     } else if (field.isAnnotationPresent(ManyToOne.class)) {
                         String fieldName = getFieldName(field);
+
                         sql.add(fieldName + " BIGINT");
                         sql.add(String.format(FOREIGN_KEY, fieldName, field.getName() + "s", "id"));
                     }
@@ -79,7 +80,7 @@ public class ORManagerImpl implements ORManager {
         } else if (type == LocalDate.class) {
             sql.add(name + DATE);
         } else if (type == int.class) {
-            sql.add(name + INT);
+            sql.add(name + LONG);
         }
     }
 
