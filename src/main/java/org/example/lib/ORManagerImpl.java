@@ -17,8 +17,9 @@ public class ORManagerImpl implements ORManager {
     private static final String ID = " BIGINT PRIMARY KEY AUTO_INCREMENT";
     private static final String NAME = " VARCHAR(255) UNIQUE NOT NULL";
     private static final String DATE = " DATE NOT NULL";
-    private static final String INT = " INT NOT NULL";
+    private static final String LONG = " BIGINT NOT NULL";
     private static final String FIND_ALL = "SELECT * FROM ";
+    private static final String FOREIGN_KEY = " FOREIGN KEY (%s) REFERENCES %s(%s)";
 
     private final Connection connection;
 
@@ -46,6 +47,11 @@ public class ORManagerImpl implements ORManager {
                         setColumnType(sql, fieldType, EntityUtils.getFieldName(field));
                     } else if (field.isAnnotationPresent(Column.class)) {
                         setColumnType(sql, fieldType, EntityUtils.getFieldName(field));
+                    } else if (field.isAnnotationPresent(ManyToOne.class)) {
+                        String fieldName = EntityUtils.getFieldName(field);
+
+                        sql.add(fieldName + " BIGINT");
+                        sql.add(String.format(FOREIGN_KEY, fieldName, field.getName() + "s", "id"));
                     }
                 }
 
@@ -69,7 +75,7 @@ public class ORManagerImpl implements ORManager {
         } else if (type == LocalDate.class) {
             sql.add(name + DATE);
         } else if (type == int.class) {
-            sql.add(name + INT);
+            sql.add(name + LONG);
         }
     }
 
@@ -188,7 +194,7 @@ public class ORManagerImpl implements ORManager {
     public <T> List<T> findAll(Class<T> cls) throws Exception {
         List<T> result = new ArrayList<>();
 
-        String sql = FIND_ALL + cls.getSimpleName() + ";";
+        String sql = FIND_ALL + EntityUtils.getTableName(cls) + ";";
         PreparedStatement preparedStatement = getConnection().prepareStatement(sql);
         ResultSet resultSet = preparedStatement.executeQuery();
 

@@ -15,6 +15,8 @@ import static org.example.lib.annotation.enums.FetchType.EAGER;
 @Retention(RUNTIME)
 public @interface ManyToOne {
 
+    String columnName();
+
     Class targetEntity() default void.class;
 
     CascadeType[] cascade() default {};
