@@ -77,6 +77,7 @@ public class ORManagerImpl implements ORManager {
     @Override
     public <T> T save(T o) {
         long id = 0L;
+        T newRecord = null;
         if(!EntityUtils.hasId(o)){
             try (PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, o.getClass(), connection),
                     Statement.RETURN_GENERATED_KEYS)) {
@@ -88,8 +89,11 @@ public class ORManagerImpl implements ORManager {
                 try (PreparedStatement statement1 = connection.prepareStatement(SqlUtils.findByIdQuery(id, o.getClass()))) {
                     ResultSet resultSet = statement1.executeQuery();
                     while(resultSet.next()){
-            //TODO map resultSet to T o
+                    Optional<?> optionalRecord = findById(id, o.getClass());
+                    newRecord = (T) optionalRecord.orElse(null);
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             } catch (SQLException | IllegalAccessException e) {
                 e.printStackTrace();
@@ -98,10 +102,7 @@ public class ORManagerImpl implements ORManager {
             long entityId = EntityUtils.getId(o);
             //TODO implement insert with update
         }
-
-
-
-        return null;
+        return newRecord;
     }
 
     @Override
