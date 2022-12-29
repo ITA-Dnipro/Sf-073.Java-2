@@ -49,7 +49,7 @@ public interface ORManager {
     <T> List<T> findAll(Class<T> cls) throws Exception;
 
     // READ ALL LAZY
-    <T> Iterable<T> findAllAsIterable(Class<T> cls); // (MEDIUM)
+    <T> Iterable<T> findAllAsIterable(Class<T> cls) throws Exception; // (MEDIUM)
 
     <T> Stream<T> findAllAsStream(Class<T> cls);     // (OPTIONAL)
 
