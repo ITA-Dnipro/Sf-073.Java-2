@@ -10,6 +10,7 @@ public class ConstantsQueries {
         }
 
         public static final String SELECT_FIRST_BOOK = "SELECT * FROM BOOK LIMIT 1";
+        public static final String SELECT_LAST_BOOK = "SELECT * FROM BOOK ORDER BY id DESC LIMIT 1";
         public static final String SELECT_ALL_FROM_BOOK_BY_ID = "SELECT * FROM BOOK WHERE id=?";
     }
 
