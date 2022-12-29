@@ -10,6 +10,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
+import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.db.api.Assertions.assertThat;
@@ -46,15 +48,15 @@ public class ORManagerImplTest {
     void test_when_tableBookExist_should_return_membersCorrectly() {
         Table table = new Table(dataSource, "BOOK");
         assertThat(table).column(0).hasColumnName("id")
-                         .column(1).hasColumnName("title")
-                         .column(2).hasColumnName("published_at");
+                .column(1).hasColumnName("title")
+                .column(2).hasColumnName("published_at");
     }
 
     @Test
     void test_when_tablePublisherExist_should_return_membersCorrectly() {
         Table table = new Table(dataSource, "PUBLISHER");
         assertThat(table).column(0).hasColumnName("id")
-                         .column(1).hasColumnName("name");
+                .column(1).hasColumnName("name");
     }
 
     @Test
@@ -81,10 +83,10 @@ public class ORManagerImplTest {
         Request request = new Request(dataSource, "select * from book");
 
         assertThat(request).column("title")
-                           .containsValues("Solaris",
-                                           "Just Book",
-                                           "Just Book 2",
-                                           "Just Book 3");
+                .containsValues("Solaris",
+                        "Just Book",
+                        "Just Book 2",
+                        "Just Book 3");
     }
 
     @Test
@@ -93,9 +95,54 @@ public class ORManagerImplTest {
         Request request = new Request(dataSource, "select * from publisher");
 
         assertThat(request).column("name")
-                           .containsValues("Just Publisher",
-                                           "MyPub1",
-                                           "MyPub2",
-                                           "MyPub3");
+                .containsValues("Just Publisher",
+                        "MyPub1",
+                        "MyPub2",
+                        "MyPub3");
+    }
+
+    @Test
+    void test_persist_Publisher_object_into_database() throws SQLException, IllegalAccessException {
+
+        Request request = new Request(dataSource, "select * from publishers");
+
+        assertThat(request).row(0)
+                .value().isEqualTo(1)
+                .value().isEqualTo("Publisher_test_persist");
+    }
+
+    @Test
+    void test_persist_Book_object_into_database() throws SQLException, IllegalAccessException {
+
+        Request request = new Request(dataSource, "select * from books");
+
+        assertThat(request).row(0)
+                .value().isEqualTo(1)
+                .value().isEqualTo("Test_Book_For_persist")
+                .value().isEqualTo(LocalDate.of(1992, 1, 1));
+    }
+
+    @Test
+    void test_findById_when_requesting_should_return_publisherObject_with_id1() {
+
+        Request request = new Request(dataSource, "select * from publishers where id = 1");
+
+        assertThat(request).column("id")
+                .value().isEqualTo(1)
+                .column("name")
+                .value().isEqualTo("Publisher_test_persist");
+    }
+
+    @Test
+    void test_findById_when_requesting_should_return_bookObject_with_id1() {
+
+        Request request = new Request(dataSource, "select * from books where id = 1");
+
+        assertThat(request).column("id")
+                .value().isEqualTo(1)
+                .column("title")
+                .value().isEqualTo("Test_Book_For_persist")
+                .column("published_at")
+                .value().isEqualTo(LocalDate.of(1992, 1, 1));
     }
 }
