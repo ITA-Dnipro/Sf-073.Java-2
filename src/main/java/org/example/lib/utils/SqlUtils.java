@@ -15,7 +15,7 @@ public class SqlUtils {
                 ") " +
                 " VALUES " +
                 " (" +
-                EntityUtils.getFieldValues(o) +
+                EntityUtils.getFieldValuesWithManyToOne(o) +
                 ")";
     }
 
