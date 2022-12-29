@@ -55,4 +55,11 @@ class MethodSaveTest {
         Assertions.assertEquals("TITLE, PUBLISHED_AT", SqlUtils.getColumnNamesInsert("BOOK", orManagerImpl.getConnection()));
         Assertions.assertEquals("ID, TITLE, PUBLISHED_AT", SqlUtils.getColumnNamesUpdate("BOOK", orManagerImpl.getConnection()));
     }
+
+    @Test
+    void should_Return_Saved_Entity_From_Db() throws Exception {
+        Book book = new Book("Sheherezaza Tales1", LocalDate.of(1956, 3, 24));
+        Book bookRecord = orManager.save(book);
+        orManager.findAll(Book.class).forEach(System.out::println);
+    }
 }
