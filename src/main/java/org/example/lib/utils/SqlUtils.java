@@ -5,56 +5,58 @@ import java.util.*;
 
 public class SqlUtils {
 
-    private SqlUtils() {}
+    private SqlUtils() {
+    }
 
-    public static String saveQuery(Object o, Class<?> cls, Connection connection) throws IllegalAccessException {
+    public static String saveQuery(Object o, Class<?> cls, Connection connection) throws SQLException {
         return "INSERT INTO " +
                 EntityUtils.getTableName(cls) +
                 " (" +
                 getColumnNamesInsert(EntityUtils.getTableName(cls), connection) +
                 ") " +
-                " VALUES " +
+                "VALUES" +
                 " (" +
-                EntityUtils.getFieldValuesWithManyToOne(o) +
+                generatePlaceholdersForSave(getResultSetMetaData(EntityUtils.getTableName(cls), connection)) +
                 ")";
     }
 
-    public static String findByIdQuery(Long id, Class<?> cls){
+    public static String findByIdQuery(Long id, Class<?> cls) {
         return "SELECT * FROM " +
                 EntityUtils.getTableName(cls) +
-                " WHERE " +
+                "WHERE" +
                 " id = " + id;
     }
 
-    public static String getColumnNamesInsert(String tableName, Connection connection) {
-        List<String> columnNames = new ArrayList<>();
+    public static ResultSetMetaData getResultSetMetaData(String tableName, Connection connection) throws SQLException {
         String query = "SELECT * FROM " + tableName + " LIMIT 1";
-        try (Statement statement = connection.createStatement()){
-            ResultSet resultSet = statement.executeQuery(query);
-            ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-            int columnsNumber = resultSetMetaData.getColumnCount();
-            for (int i = 2; i <= columnsNumber; i++) {
-                columnNames.add(resultSetMetaData.getColumnName(i));
-            }
-        } catch (SQLException ex) {
-            ex.printStackTrace();
+        Statement statement = connection.createStatement();
+        ResultSet resultSet = statement.executeQuery(query);
+        return resultSet.getMetaData();
+    }
+
+    public static String getColumnNamesInsert(String tableName, Connection connection) throws SQLException {
+        List<String> columnNames = new ArrayList<>();
+        int columnCount = getResultSetMetaData(tableName, connection).getColumnCount();
+        for (int i = 2; i <= columnCount; i++) {
+            columnNames.add(getResultSetMetaData(tableName, connection).getColumnName(i));
         }
         return String.join(", ", columnNames);
     }
 
-    public static String getColumnNamesUpdate(String tableName, Connection connection) {
+    public static String getColumnNamesUpdate(String tableName, Connection connection) throws SQLException {
         List<String> columnNames = new ArrayList<>();
-        String query = "SELECT * FROM " + tableName + " LIMIT 1";
-        try (Statement statement = connection.createStatement()){
-            ResultSet resultSet = statement.executeQuery(query);
-            ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-            int columnsNumber = resultSetMetaData.getColumnCount();
-            for (int i = 1; i <= columnsNumber; i++) {
-                columnNames.add(resultSetMetaData.getColumnName(i));
-            }
-        } catch (SQLException ex) {
-            ex.printStackTrace();
+        int columnCount = getResultSetMetaData(tableName, connection).getColumnCount();
+        for (int i = 1; i <= columnCount; i++) {
+            columnNames.add(getResultSetMetaData(tableName, connection).getColumnName(i));
         }
         return String.join(", ", columnNames);
+    }
+
+    public static String generatePlaceholdersForSave(ResultSetMetaData resultSetMetaData) throws SQLException {
+        int columnCount = resultSetMetaData.getColumnCount() - 1;
+        var sb = new StringBuilder();
+        sb.append(" ?,".repeat(Math.max(0, columnCount)));
+        sb.deleteCharAt(sb.length()-1);
+        return sb.toString();
     }
 }
