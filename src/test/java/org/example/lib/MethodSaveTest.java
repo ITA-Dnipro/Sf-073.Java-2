@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.assertj.db.type.*;
 import org.example.configs.PropertyConfiguration;
 import org.example.entity.Book;
+import org.example.entity.Publisher;
 import org.example.lib.utils.*;
 import org.junit.jupiter.api.*;
 
@@ -60,6 +61,7 @@ class MethodSaveTest {
     void should_Return_Saved_Entity_From_Db() throws Exception {
         Book book = new Book("Sheherezaza Tales1", LocalDate.of(1956, 3, 24));
         Book bookRecord = orManager.save(book);
-        orManager.findAll(Book.class).forEach(System.out::println);
+        orManager.findAll(Publisher.class).forEach(System.out::println);
+        System.out.println(bookRecord);
     }
 }
