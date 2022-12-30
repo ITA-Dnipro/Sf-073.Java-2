@@ -7,7 +7,9 @@ import javax.sql.DataSource;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.rmi.NoSuchObjectException;
 import java.sql.*;
+import java.sql.Date;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Stream;
@@ -24,8 +26,8 @@ public class ORManagerImpl implements ORManager {
 
     private final Connection connection;
 
-    public ORManagerImpl(Connection connection) {
-        this.connection = connection;
+    public ORManagerImpl(DataSource dataSource) throws SQLException {
+        this.connection = dataSource.getConnection();
     }
 
     public Connection getConnection() {
@@ -58,6 +60,7 @@ public class ORManagerImpl implements ORManager {
 
                 String sqlCreateTable = String.format("%s %s(%s);", CREATE_TABLE, tableName,
                                                       String.join(", ", sql));
+                System.out.println(sqlCreateTable);
 
                 try (var prepStmt = getConnection().prepareStatement(sqlCreateTable)) {
                     prepStmt.executeUpdate();
@@ -82,27 +85,23 @@ public class ORManagerImpl implements ORManager {
 
 
     @Override
-    public <T> T save(T o) {
+    public <T> T save(T o) throws Exception {
         long id = 0L;
         T newRecord = null;
         if(!EntityUtils.hasId(o)){
-            try (PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, o.getClass(), connection),
+            try(PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, o.getClass(), connection),
                     Statement.RETURN_GENERATED_KEYS)) {
+                statement.setString(1, "Book Test 15");
+                statement.setDate(2, Date.valueOf(LocalDate.of(2000, 2, 14)));
+                statement.setLong(3, 2);
                 statement.executeUpdate();
                 ResultSet keys = statement.getGeneratedKeys();
-                while(keys.next()){
+                while (keys.next()) {
                     id = keys.getLong("id");
                 }
-                Optional<?> optionalRecord = null;
-                try {
-                    optionalRecord = findById(id, o.getClass());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    throw new SQLException("Exception from findById when saving new entity!");
-                }
-                newRecord = (T) optionalRecord.orElse(null);
-            } catch (SQLException | IllegalAccessException e) {
-                e.printStackTrace();
+                newRecord = (T) Optional.ofNullable(findById(id, o.getClass())).orElseThrow();
+            }catch(SQLException ex){
+                ex.printStackTrace();
             }
         }else{
             long entityId = EntityUtils.getId(o);
