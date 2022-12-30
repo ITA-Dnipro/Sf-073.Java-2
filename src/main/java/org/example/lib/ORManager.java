@@ -18,14 +18,14 @@ import java.util.stream.Stream;
 
 public interface ORManager {
 
-    static ORManager withPropertiesFrom(String filename) {
+    static ORManager withPropertiesFrom(String filename) throws SQLException {
         Properties properties = PropertyConfiguration.readPropertiesFromFile(Path.of(filename));
-        return new ORManagerImpl(ConnectionUtils.createConnection(properties));
+        return new ORManagerImpl((DataSource) ConnectionUtils.createConnection(properties));
     }
 
 
     static ORManager withDataSource(DataSource dataSource) throws SQLException {
-        return new ORManagerImpl(HikariCPDataSource.getHikariDatasourceConfiguration(dataSource).getConnection());
+        return new ORManagerImpl(HikariCPDataSource.getHikariDatasourceConfiguration(dataSource));
     }
 
     // generate the schema in the DB

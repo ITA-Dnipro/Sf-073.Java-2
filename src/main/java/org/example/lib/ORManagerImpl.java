@@ -2,6 +2,7 @@ package org.example.lib;
 
 import org.example.lib.annotation.*;
 
+import javax.sql.DataSource;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -28,8 +29,8 @@ public class ORManagerImpl implements ORManager {
 
     private final Connection connection;
 
-    public ORManagerImpl(Connection connection) {
-        this.connection = connection;
+    public ORManagerImpl(DataSource dataSource) throws SQLException {
+        this.connection = dataSource.getConnection();
     }
 
     public Connection getConnection() {
