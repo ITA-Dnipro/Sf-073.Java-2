@@ -72,7 +72,6 @@ public class ORManagerImplTest {
     @Test
     @DisplayName("Persisted Publisher with id = 1 exists")
     void test_persist_Publisher_should_return_firstRowValuesCorrectly() {
-
         Request request = new Request(dataSource, "select * from publishers");
 
         assertThat(request).row(0)
@@ -80,11 +79,9 @@ public class ORManagerImplTest {
                            .value().isEqualTo("Test Publisher");
     }
 
-
     @Test
     @DisplayName("Persisted Book with id = 1 exists")
     void test_persist_Book_should_return_firstRowValuesCorrectly() {
-
         Request request = new Request(dataSource, "select * from books");
 
         assertThat(request).row(0)
@@ -96,7 +93,6 @@ public class ORManagerImplTest {
     @Test
     @DisplayName("Find Publisher with id = 1")
     void test_findById_when_requesting_should_return_publisherObject_with_id1() {
-
         Request request = new Request(dataSource, "select * from publishers where id = 1");
 
         assertThat(request).column("id")
@@ -108,7 +104,6 @@ public class ORManagerImplTest {
     @Test
     @DisplayName("Find Book with id = 1")
     void test_findById_when_requesting_should_return_bookObject_with_id1() {
-
         Request request = new Request(dataSource, "select * from books where id = 1");
 
         assertThat(request).column("id")
@@ -152,7 +147,6 @@ public class ORManagerImplTest {
     @Test
     @DisplayName("Find all Publishers in column name")
     void test_findAll_when_requestingAllPublishers_should_returnAllValues() throws Exception {
-
         Request request = new Request(dataSource, "select * from publishers");
 
         assertThat(request).column("name")
