@@ -205,8 +205,6 @@ public class ORManagerImpl implements ORManager {
         String fieldName;
         T entity;
         try {
-
-
             entity = cls.getDeclaredConstructor().newInstance();
 
             Field[] declaredFields = cls.getDeclaredFields();
@@ -242,13 +240,10 @@ public class ORManagerImpl implements ORManager {
         try {
             if (field.getType() == long.class || field.getType() == Long.class) {
                 field.set(entity, Long.parseLong(value));
-
             } else if (field.getType() == int.class || field.getType() == Integer.class) {
                 field.set(entity, Integer.parseInt(value));
-
             } else if (field.getType() == LocalDate.class) {
                 field.set(entity, LocalDate.parse(value));
-
             } else if (field.getType() == String.class) {
                 field.set(entity, value);
 
