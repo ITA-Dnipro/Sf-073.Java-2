@@ -4,7 +4,6 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.assertj.db.type.Request;
 import org.assertj.db.type.Table;
-import org.example.configs.HikariCPDataSource;
 import org.example.entity.Book;
 import org.example.entity.Publisher;
 import org.junit.jupiter.api.*;
@@ -23,17 +22,23 @@ public class ORManagerImplTest {
     @BeforeAll
     static void setUp() throws Exception {
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:h2:file:./src/test/db/h2mem-test");
+        config.setJdbcUrl("jdbc:h2:file:./src/test/db/test-db");
         dataSource = new HikariDataSource(config);
         orManager = ORManager.withDataSource(dataSource);
 
         orManager.register(Publisher.class);
         orManager.register(Book.class);
+        orManager.persist(new Book("Test Book", LocalDate.now()));
+        orManager.persist(new Publisher("Test Publisher"));
     }
 
     @AfterAll
     static void dropDB() {
-       new Request(dataSource, "drop schema h2mem-test");
+        try {
+            dataSource.getConnection().prepareStatement("drop all objects").execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     @Test
@@ -65,10 +70,8 @@ public class ORManagerImplTest {
     }
 
     @Test
-    @DisplayName("Persist Publisher")
-    void test_persist_Publisher_should_return_firstRowValuesCorrectly() throws SQLException, IllegalAccessException {
-        Publisher publisher = new Publisher("Test Publisher");
-        orManager.persist(publisher);
+    @DisplayName("Persisted Publisher with id = 1 exists")
+    void test_persist_Publisher_should_return_firstRowValuesCorrectly() {
 
         Request request = new Request(dataSource, "select * from publishers");
 
@@ -79,10 +82,8 @@ public class ORManagerImplTest {
 
 
     @Test
-    @DisplayName("Persist Book")
-    void test_persist_Book_should_return_firstRowValuesCorrectly() throws SQLException, IllegalAccessException {
-        Book book = new Book("Test Book", LocalDate.now());
-        orManager.persist(book);
+    @DisplayName("Persisted Book with id = 1 exists")
+    void test_persist_Book_should_return_firstRowValuesCorrectly() {
 
         Request request = new Request(dataSource, "select * from books");
 
