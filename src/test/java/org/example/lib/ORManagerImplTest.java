@@ -9,6 +9,7 @@ import org.example.entity.Publisher;
 import org.junit.jupiter.api.*;
 
 import javax.sql.DataSource;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
@@ -28,8 +29,10 @@ public class ORManagerImplTest {
 
         orManager.register(Publisher.class);
         orManager.register(Book.class);
-        orManager.persist(new Book("Test Book", LocalDate.now()));
-        orManager.persist(new Publisher("Test Publisher"));
+        Book book = new Book("Test Book", LocalDate.now());
+        Publisher publisher = new Publisher("Test Publisher");
+        orManager.persist(book);
+        orManager.persist(publisher);
     }
 
     @AfterAll
@@ -70,8 +73,8 @@ public class ORManagerImplTest {
     }
 
     @Test
-    @DisplayName("Persisted Publisher with id = 1 exists")
-    void test_persist_Publisher_should_return_firstRowValuesCorrectly() {
+    @DisplayName("Persisted publisher exists")
+    void test_persistedPublisher_should_return_firstRowValuesCorrectly() {
         Request request = new Request(dataSource, "select * from publishers");
 
         assertThat(request).row(0)
@@ -80,8 +83,8 @@ public class ORManagerImplTest {
     }
 
     @Test
-    @DisplayName("Persisted Book with id = 1 exists")
-    void test_persist_Book_should_return_firstRowValuesCorrectly() {
+    @DisplayName("Persisted book exists")
+    void test_persistedBook_should_return_firstRowValuesCorrectly() {
         Request request = new Request(dataSource, "select * from books");
 
         assertThat(request).row(0)
@@ -92,34 +95,35 @@ public class ORManagerImplTest {
 
     @Test
     @DisplayName("Find Publisher with id = 1")
-    void test_findById_when_requesting_should_return_publisherObject_with_id1() {
+    void test_findById_when_requesting_should_return_publisherObject_with_id1() throws SQLException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
         Request request = new Request(dataSource, "select * from publishers where id = 1");
+
+        Publisher publisher = orManager.findById(1, Publisher.class).get();
 
         assertThat(request).column("id")
                            .value().isEqualTo(1)
                            .column("name")
                            .value().isEqualTo("Test Publisher");
+
+        assertThat(request).equals(publisher);
     }
 
     @Test
     @DisplayName("Find Book with id = 1")
-    void test_findById_when_requesting_should_return_bookObject_with_id1() {
+    void test_findById_when_requesting_should_return_bookObject_with_id1() throws SQLException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
         Request request = new Request(dataSource, "select * from books where id = 1");
 
-        assertThat(request).column("id")
-                           .value().isEqualTo(1)
-                           .column("title")
-                           .value().isEqualTo("Test Book")
-                           .column("published_at")
-                           .value().isEqualTo(LocalDate.now());
+        Book book = orManager.findById(1, Book.class).get();
+
+        assertThat(request).equals(book);
     }
 
     @Test
     @DisplayName("Find all books count in the table")
     void test_findAll_when_requestingAllBooks_should_returnNumberOfRowsCorrectly() throws Exception {
-        List<Book> expected = orManager.findAll(Book.class);
-
         Request request = new Request(dataSource, "select * from books");
+
+        List<Book> expected = orManager.findAll(Book.class);
 
         assertThat(request).hasNumberOfRows(expected.size());
     }
@@ -127,12 +131,33 @@ public class ORManagerImplTest {
     @Test
     @DisplayName("Find all publishers count in the table")
     void test_findAll_when_requestingAllPublishers_should_returnNumberOfRowsCorrectly() throws Exception {
-        List<Publisher> expected = orManager.findAll(Publisher.class);
-
         Request request = new Request(dataSource, "select * from publishers");
+
+        List<Publisher> expected = orManager.findAll(Publisher.class);
 
         assertThat(request).hasNumberOfRows(expected.size());
     }
+
+    @Test
+    @DisplayName("Find all books")
+    void test_findAll_when_requestingAllBooks_should_return_AllBooksCorrectly() throws Exception {
+        Request request = new Request(dataSource, "select * from books");
+
+        List<Book> expected = orManager.findAll(Book.class);
+
+        assertThat(request).equals(expected);
+    }
+
+    @Test
+    @DisplayName("Find all publishers")
+    void test_findAll_when_requestingAllPublishers_should_return_AllBooksCorrectly() throws Exception {
+        Request request = new Request(dataSource, "select * from publishers");
+
+        List<Publisher> expected = orManager.findAll(Publisher.class);
+
+        assertThat(request).equals(expected);
+    }
+
 
     @Test
     @DisplayName("Find all Books in column title")
