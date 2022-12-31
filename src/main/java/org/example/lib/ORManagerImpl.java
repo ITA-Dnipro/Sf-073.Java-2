@@ -135,7 +135,7 @@ public class ORManagerImpl implements ORManager {
             this.connection.prepareStatement(sql).execute();
             LOGGER.info(String.format("Successfully added %s to the database", o.getClass()));
         } catch (SQLException exception) {
-            LOGGER.error("The object is already persisted in the database");
+            LOGGER.error(String.format("%s with that name already exists in the database. The name of the %s should be UNIQUE", o.getClass(), o.getClass()));
             throw new ExistingObjectException("An error has occurred");
         }
     }

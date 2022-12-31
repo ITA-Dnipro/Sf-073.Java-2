@@ -22,13 +22,15 @@ public class Main {
         Book book2 = new Book("Just Book", LocalDate.now());
         Book book3 = new Book("Just Book 2", LocalDate.of(1961, 1, 1));
         Book book4 = new Book("Just Book 3", LocalDate.of(1961, 1, 1));
+        Book book5 = new Book("Just Book 4", LocalDate.of(1961, 1, 1));
+        Book book6 = new Book("new book", LocalDate.of(1961, 1, 1));
 
         Publisher publisher1 = new Publisher("Just Publisher");
         Publisher publisher2 = new Publisher("MyPub1");
         Publisher publisher3 = new Publisher("MyPub2");
         Publisher publisher4 = new Publisher("MyPub3");
 
-//        orManager.persist(book1);
+//        orManager.persist(book6);
 //        orManager.persist(book2);
 //        orManager.persist(book3);
 //        orManager.persist(book4);
@@ -46,7 +48,11 @@ public class Main {
         System.out.println();
 
         System.out.println("Find Book and Publisher by ID");
-        System.out.println(orManager.findById(1, Book.class));
+
+        Optional<Book> book = orManager.findById(1, Book.class);
+        book.ifPresent(System.out::println);
+
+        System.out.println(orManager.findById(10, Book.class));
         System.out.println(orManager.findById(1, Publisher.class));
     }
 }
