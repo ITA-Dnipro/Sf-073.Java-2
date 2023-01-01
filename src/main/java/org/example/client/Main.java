@@ -62,5 +62,10 @@ public class Main {
 
         Publisher newPublisherRecord = orManager.save(newPublisher);
         System.out.println(newPublisherRecord);
+        System.out.println("Find All Books");
+        orManager.findAll(Book.class).forEach(System.out::println);
+        System.out.println("Find All Publishers");
+        orManager.findAll(Publisher.class).forEach(System.out::println);
+        System.out.println();
     }
 }
