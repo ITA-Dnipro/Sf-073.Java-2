@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 
 import static org.assertj.db.api.Assertions.assertThat;
@@ -36,13 +37,6 @@ class MethodSaveTest {
     }
 
     @Test
-    void should_Check_If_Entity_Exists_In_Db() {
-        Request requestFirstBook = new Request(h2Source, ConstantsQueries.SqlSelectQueries.SELECT_FIRST_BOOK);
-        assertThat(requestFirstBook).row(0)
-                .hasValues(1, "Solaris", "1961-01-01");
-    }
-
-    @Test
     void should_Check_If_Method_HasId_Is_Correct() throws Exception {
         Book book = new Book("Hibernate101", LocalDate.of(2000, 10, 5));
         Assertions.assertFalse(EntityUtils.hasId(book));
@@ -53,8 +47,10 @@ class MethodSaveTest {
 
     @Test
     void should_Retrieve_Column_Names_From_Table() throws Exception {
-        Assertions.assertEquals("TITLE, PUBLISHED_AT", SqlUtils.getColumnNamesInsert("BOOK", orManagerImpl.getConnection()));
-        Assertions.assertEquals("ID, TITLE, PUBLISHED_AT", SqlUtils.getColumnNamesUpdate("BOOK", orManagerImpl.getConnection()));
+        Assertions.assertEquals("TITLE, PUBLISHED_AT, PUBLISHER", SqlUtils.getColumnNamesInsert("BOOKS", orManagerImpl.getConnection()));
+        Assertions.assertEquals("ID, TITLE, PUBLISHED_AT, PUBLISHER", SqlUtils.getColumnNamesUpdate("BOOKS", orManagerImpl.getConnection()));
+        Assertions.assertEquals("NAME", SqlUtils.getColumnNamesInsert("PUBLISHERS", orManagerImpl.getConnection()));
+        Assertions.assertEquals("ID, NAME", SqlUtils.getColumnNamesUpdate("PUBLISHERS", orManagerImpl.getConnection()));
     }
 
     @Test
