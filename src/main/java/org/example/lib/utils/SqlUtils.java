@@ -27,6 +27,12 @@ public class SqlUtils {
                 " id = " + id;
     }
 
+    public static String selectFirstFromTable(Class<?> cls) {
+        return "SELECT * FROM " +
+                EntityUtils.getTableName(cls) +
+                " LIMIT 1";
+    }
+
     public static ResultSetMetaData getResultSetMetaData(String tableName, Connection connection) throws SQLException {
         String query = "SELECT * FROM " + tableName + " LIMIT 1";
         Statement statement = connection.createStatement();
