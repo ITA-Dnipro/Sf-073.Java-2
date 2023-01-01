@@ -1,5 +1,6 @@
 package org.example.lib;
 
+import org.example.entity.Publisher;
 import org.example.lib.annotation.*;
 import org.example.lib.utils.*;
 
@@ -90,22 +91,28 @@ public class ORManagerImpl implements ORManager {
         T newRecord = null;
         if(!EntityUtils.hasId(o)){
             try(PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, o.getClass(), connection),
-                    Statement.RETURN_GENERATED_KEYS)) {
-                statement.setString(1, "Book Test 15");
-                statement.setDate(2, Date.valueOf(LocalDate.of(2000, 2, 14)));
-                statement.setLong(3, 2);
+                    Statement.RETURN_GENERATED_KEYS);
+                PreparedStatement stBefore = connection.prepareStatement(SqlUtils.selectFirstFromTable(o.getClass()))) {
+                ResultSetMetaData resultSetMetaData = stBefore.getMetaData();
+                EntityUtils.setterPreparedStatementExecution(statement, resultSetMetaData, o);
                 statement.executeUpdate();
                 ResultSet keys = statement.getGeneratedKeys();
                 while (keys.next()) {
                     id = keys.getLong("id");
                 }
-                newRecord = (T) Optional.ofNullable(findById(id, o.getClass())).orElseThrow();
+                Optional<T> optRecord = (Optional<T>) Optional.ofNullable(findById(id, o.getClass())).orElseThrow();
+                if(optRecord.isPresent()){
+                    newRecord = (T) optRecord.get();
+                }
             }catch(SQLException ex){
                 ex.printStackTrace();
             }
         }else{
             long entityId = EntityUtils.getId(o);
-            //TODO implement insert with update
+            Optional<T> optRecord = (Optional<T>) Optional.ofNullable(findById(entityId, o.getClass())).orElseThrow();
+            if(optRecord.isPresent()){
+                newRecord = (T) optRecord.get();
+            }
         }
         return newRecord;
     }
