@@ -89,12 +89,13 @@ public class ORManagerImpl implements ORManager {
     public <T> T save(T o) throws Exception {
         long id = 0L;
         T newRecord = null;
+        Map<String, Object> associatedEntities = new HashMap<>();
         if(!EntityUtils.hasId(o)){
             try(PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, o.getClass(), connection),
                     Statement.RETURN_GENERATED_KEYS);
                 PreparedStatement stBefore = connection.prepareStatement(SqlUtils.selectFirstFromTable(o.getClass()))) {
                 ResultSetMetaData resultSetMetaData = stBefore.getMetaData();
-                EntityUtils.setterPreparedStatementExecution(statement, resultSetMetaData, o);
+                EntityUtils.setterPreparedStatementExecution(statement, resultSetMetaData, o, associatedEntities);
                 statement.executeUpdate();
                 ResultSet keys = statement.getGeneratedKeys();
                 while (keys.next()) {
@@ -103,6 +104,7 @@ public class ORManagerImpl implements ORManager {
                 Optional<T> optRecord = (Optional<T>) Optional.ofNullable(findById(id, o.getClass())).orElseThrow();
                 if(optRecord.isPresent()){
                     newRecord = (T) optRecord.get();
+                    EntityUtils.addNewRecordToAssociatedManyToOneCollection(newRecord, resultSetMetaData, associatedEntities);
                 }
             }catch(SQLException ex){
                 ex.printStackTrace();
