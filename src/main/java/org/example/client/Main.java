@@ -18,22 +18,26 @@ public class Main {
         orManager.register(Publisher.class);
         orManager.register(Book.class);
 
+        Book book1 = new Book("Solaris", LocalDate.of(1961, 1, 1));
+        Book book2 = new Book("Just Book", LocalDate.now());
+        Book book3 = new Book("Just Book 2", LocalDate.of(1961, 1, 1));
+        Book book4 = new Book("Just Book 3", LocalDate.of(1961, 1, 1));
+        Book book5 = new Book("Just Book 4", LocalDate.of(1961, 1, 1));
+        Book book6 = new Book("new book", LocalDate.of(1961, 1, 1));
+
         Publisher publisher1 = new Publisher("Just Publisher");
         Publisher publisher2 = new Publisher("MyPub1");
         Publisher publisher3 = new Publisher("MyPub2");
         Publisher publisher4 = new Publisher("MyPub3");
 
-        Book book1 = new Book("Solaris", LocalDate.of(1961, 1, 1), new Publisher("Pub1"));
-        Book book2 = new Book("Just Book", LocalDate.now(), null);
-        Book book3 = new Book("Just Book 2", LocalDate.of(1961, 1, 1));
-
-        orManager.persist(book1);
-        orManager.persist(book2);
-        orManager.persist(book3);
-        orManager.persist(publisher1);
-        orManager.persist(publisher2);
-        orManager.persist(publisher3);
-        orManager.persist(publisher4);
+//        orManager.persist(book6);
+//        orManager.persist(book2);
+//        orManager.persist(book3);
+//        orManager.persist(book4);
+//        orManager.persist(publisher1);
+//        orManager.persist(publisher2);
+//        orManager.persist(publisher3);
+//        orManager.persist(publisher4);
 
         System.out.println("Find All Books");
         orManager.findAll(Book.class).forEach(System.out::println);
@@ -44,7 +48,11 @@ public class Main {
         System.out.println();
 
         System.out.println("Find Book and Publisher by ID");
-        System.out.println(orManager.findById(1, Book.class));
+
+        Optional<Book> book = orManager.findById(1, Book.class);
+        book.ifPresent(System.out::println);
+
+        System.out.println(orManager.findById(10, Book.class));
         System.out.println(orManager.findById(1, Publisher.class));
 
         System.out.println("Save new Entity");

@@ -2,6 +2,11 @@ package org.example.lib;
 
 import org.example.entity.Publisher;
 import org.example.lib.annotation.*;
+import org.example.lib.exception.ExistingObjectException;
+import org.example.lib.exception.ORMException;
+import org.example.lib.exception.UnsupportedTypeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.example.lib.utils.*;
 
 import javax.sql.DataSource;
@@ -26,6 +31,7 @@ public class ORManagerImpl implements ORManager {
     private static final String FOREIGN_KEY = " FOREIGN KEY (%s) REFERENCES %s(%s)";
 
     private final Connection connection;
+    private final static Logger LOGGER = LoggerFactory.getLogger(ORManagerImpl.class);
 
     public ORManagerImpl(DataSource dataSource) throws SQLException {
         this.connection = dataSource.getConnection();
@@ -36,7 +42,7 @@ public class ORManagerImpl implements ORManager {
     }
 
     @Override
-    public void register(Class<?>... entityClasses) throws Exception {
+    public void register(Class<?>... entityClasses) throws ORMException {
         for (Class<?> cls : entityClasses) {
 
             if (cls.isAnnotationPresent(Entity.class)) {
@@ -60,11 +66,13 @@ public class ORManagerImpl implements ORManager {
                 }
 
                 String sqlCreateTable = String.format("%s %s(%s);", CREATE_TABLE, tableName,
-                                                      String.join(", ", sql));
-                System.out.println(sqlCreateTable);
+                        String.join(", ", sql));
 
                 try (var prepStmt = getConnection().prepareStatement(sqlCreateTable)) {
                     prepStmt.executeUpdate();
+                } catch (SQLException exception) {
+                    LOGGER.error("Cannot create table without annotation @Entity or fields without annotation @Id, @Column or @ManyToOne");
+                    throw new ORMException("An error has occurred");
                 }
             }
         }
@@ -84,9 +92,33 @@ public class ORManagerImpl implements ORManager {
         }
     }
 
+    private String getFieldName(Field field) {
+        if (field.isAnnotationPresent(Column.class)) {
+            String name = field.getAnnotation(Column.class).name();
+            if (!name.equals("")) {
+                return name;
+            }
+        } else if (field.isAnnotationPresent(ManyToOne.class)) {
+            String name = field.getAnnotation(ManyToOne.class).columnName();
+            if (!name.equals("")) {
+                return name;
+            }
+        }
+        return field.getName();
+    }
+
+    public static String getTableName(Class<?> cls) {
+        if (cls.isAnnotationPresent(Table.class)) {
+            String name = cls.getAnnotation(Table.class).name();
+            if (!name.equals("")) {
+                return name;
+            }
+        }
+        return cls.getSimpleName();
+    }
 
     @Override
-    public <T> T save(T o) throws Exception {
+    public <T> T save(T o) throws SQLException {
         long id = 0L;
         T newRecord = null;
         Map<String, Object> associatedEntities = new HashMap<>();
@@ -120,117 +152,171 @@ public class ORManagerImpl implements ORManager {
     }
 
     @Override
-    public void persist(Object o) throws SQLException, IllegalAccessException {
-        String tableName = EntityUtils.getTableName(o.getClass());
-        String fieldList = EntityUtils.getFieldsWithoutId(o);
-        String valueList = EntityUtils.getFieldValues(o);
+    public void persist(Object o) throws ORMException, ExistingObjectException {
+        String tableName = getTableName(o.getClass());
+        String fieldList = getFieldsWithoutId(o);
+        String valueList = getValues(o);
 
         String sql = String.format("INSERT INTO %s (%s) VALUES (%s)", tableName, fieldList, valueList);
 
-        this.connection.prepareStatement(sql).execute();
+        try {
+            this.connection.prepareStatement(sql).execute();
+            LOGGER.info(String.format("Successfully added %s to the database", o.getClass()));
+        } catch (SQLException exception) {
+            LOGGER.error(String.format("%s with that name already exists in the database. The name of the %s should be UNIQUE", o.getClass(), o.getClass()));
+            throw new ExistingObjectException("An error has occurred");
+        }
     }
 
+    private String getValues(Object o) throws ORMException {
+        Field[] declaredFields = o.getClass().getDeclaredFields();
+
+        List<String> result = new ArrayList<>();
+        try {
+            for (Field declaredField : declaredFields) {
+                if (declaredField.getAnnotation(Column.class) != null) {
+                    declaredField.setAccessible(true);
+                    Object value = declaredField.get(o);
+                    result.add("'" + value.toString() + "'");
+                }
+            }
+        } catch (IllegalAccessException exception) {
+            LOGGER.debug("Cannot get the values the entity");
+            throw new ORMException("An error has occurred");
+        }
+
+        return String.join(",", result);
+    }
+
+    private String getFieldsWithoutId(Object o) {
+        return Arrays.stream(o.getClass()
+                        .getDeclaredFields())
+                .filter(f -> f.getDeclaredAnnotation(Column.class) != null)
+                .map(f -> {
+                    String name = f.getAnnotation(Column.class).name();
+                    if (!name.equals("")) {
+                        return name;
+                    } else {
+                        return f.getName();
+                    }
+                })
+                .collect(Collectors.joining(","));
+    }
 
     @Override
-    public <T> Optional<T> findById(Serializable id, Class<T> cls) throws Exception{
-
-        String tableName = EntityUtils.getTableName(cls);
-
+    public <T> Optional<T> findById(Serializable id, Class<T> cls) throws ORMException {
+        String tableName = getTableName(cls);
         String sql = String.format("SELECT * FROM %s WHERE id = %s;", tableName, id);
 
-        ResultSet resultSet = connection.prepareStatement(sql).executeQuery();
+        ResultSet resultSet;
+        try {
+            resultSet = connection.prepareStatement(sql).executeQuery();
+        } catch (SQLException exception) {
+            throw new ORMException(exception.getMessage());
+        }
 
         return createEntity(cls, resultSet);
 
     }
 
-    private <T> Optional<T> createEntity(Class<T> cls, ResultSet resultSet) throws SQLException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+    private <T> Optional<T> createEntity(Class<T> cls, ResultSet resultSet) throws ORMException {
 
-        if (!resultSet.next()) {
-            return Optional.empty();
+        try {
+            if (!resultSet.next()) {
+                LOGGER.info("Element with that ID doesnt exist");
+                return Optional.empty();
+            }
+        } catch (SQLException exception) {
+            throw new ORMException("An error has occurred");
         }
 
         String fieldName;
+        T entity;
+        try {
+            entity = cls.getDeclaredConstructor().newInstance();
 
-        T entity = cls.getDeclaredConstructor().newInstance();
+            Field[] declaredFields = cls.getDeclaredFields();
+            for (Field declaredField : declaredFields) {
 
-        Field[] declaredFields = cls.getDeclaredFields();
-        for (Field declaredField : declaredFields) {
+                if (!declaredField.isAnnotationPresent(Column.class) &&
+                        !declaredField.isAnnotationPresent(Id.class)) {
+                    continue;
+                }
+                Column columnAnnotation = declaredField.getAnnotation(Column.class);
 
-            if (!declaredField.isAnnotationPresent(Column.class) &&
-                    !declaredField.isAnnotationPresent(Id.class)) {
-                continue;
+                if (columnAnnotation == null) {
+                    fieldName = declaredField.getName();
+                } else if (!columnAnnotation.name().equals("")) {
+                    fieldName = columnAnnotation.name();
+                } else {
+                    fieldName = declaredField.getName();
+                }
+
+                String value = resultSet.getString(fieldName);
+                entity = fillData(entity, declaredField, value);
             }
-            Column columnAnnotation = declaredField.getAnnotation(Column.class);
-
-            if (columnAnnotation == null) {
-                fieldName = declaredField.getName();
-            } else if (!columnAnnotation.name().equals("")) {
-                fieldName = columnAnnotation.name();
-            } else {
-                fieldName = declaredField.getName();
-            }
-
-            String value = resultSet.getString(fieldName);
-            entity = fillData(entity, declaredField, value);
+        } catch (NoSuchMethodException | IllegalAccessException | SQLException | InvocationTargetException |
+                 InstantiationException exception) {
+            LOGGER.error("Cannot create entity");
+            throw new ORMException(exception.getMessage());
         }
         return Optional.of(entity);
     }
 
-    private <T> T fillData(T entity, Field field, String value) throws IllegalAccessException {
+    private <T> T fillData(T entity, Field field, String value) {
         field.setAccessible(true);
+        try {
+            if (field.getType() == long.class || field.getType() == Long.class) {
+                field.set(entity, Long.parseLong(value));
+            } else if (field.getType() == int.class || field.getType() == Integer.class) {
+                field.set(entity, Integer.parseInt(value));
+            } else if (field.getType() == LocalDate.class) {
+                field.set(entity, LocalDate.parse(value));
+            } else if (field.getType() == String.class) {
+                field.set(entity, value);
 
-        if (field.getType() == long.class || field.getType() == Long.class) {
-            field.set(entity, Long.parseLong(value));
-
-        } else if (field.getType() == int.class || field.getType() == Integer.class) {
-            field.set(entity, Integer.parseInt(value));
-
-        } else if (field.getType() == LocalDate.class) {
-            field.set(entity, LocalDate.parse(value));
-
-        } else if (field.getType() == String.class) {
-            field.set(entity, value);
-
-        } else {
-            throw new RuntimeException("Unsupported type " + field.getType());
+            }
+        } catch (IllegalAccessException exception) {
+            LOGGER.error(String.format("Unsupported type %s", field.getType()));
+            throw new UnsupportedTypeException("An error has occurred");
         }
         return entity;
     }
 
     @Override
-    public <T> List<T> findAll(Class<T> cls) throws Exception {
+    public <T> List<T> findAll(Class<T> cls) throws ORMException {
         List<T> result = new ArrayList<>();
+        String sql = FIND_ALL + getTableName(cls) + ";";
 
-        String sql = FIND_ALL + EntityUtils.getTableName(cls) + ";";
-        PreparedStatement preparedStatement = getConnection().prepareStatement(sql);
-        ResultSet resultSet = preparedStatement.executeQuery();
+        try {
+            PreparedStatement preparedStatement = getConnection().prepareStatement(sql);
+            ResultSet resultSet = preparedStatement.executeQuery();
 
-        while (resultSet.next()) {
-            T obj = cls.getConstructor().newInstance();
-
-            Field[] declaredFields = obj.getClass().getDeclaredFields();
-
-            for (Field field : declaredFields) {
-
-                if (!field.isAnnotationPresent(Id.class) && !field.isAnnotationPresent(Column.class)) {
-                    continue;
+            while (resultSet.next()) {
+                T obj = cls.getConstructor().newInstance();
+                Field[] declaredFields = obj.getClass().getDeclaredFields();
+                for (Field field : declaredFields) {
+                    if (!field.isAnnotationPresent(Id.class) && !field.isAnnotationPresent(Column.class)) {
+                        continue;
+                    }
+                    String name = getFieldName(field);
+                    String value = resultSet.getString(name);
+                    field.setAccessible(true);
+                    fillData(obj, field, value);
                 }
-
-                String name = EntityUtils.getFieldName(field);
-                String value = resultSet.getString(name);
-
-                field.setAccessible(true);
-                fillData(obj, field, value);
+                result.add(obj);
             }
-            result.add(obj);
+        } catch (NoSuchMethodException | IllegalAccessException | SQLException | InvocationTargetException |
+                 InstantiationException exception) {
+            LOGGER.error("Something went wrong");
+            throw new ORMException(exception.getMessage());
         }
         return result;
     }
 
     @Override
     public <T> Iterable<T> findAllAsIterable(Class<T> cls) throws Exception {
-        return findAll(cls);
+        return null;
     }
 
     @Override
