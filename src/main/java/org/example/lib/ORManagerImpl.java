@@ -80,7 +80,6 @@ public class ORManagerImpl implements ORManager {
         }
     }
 
-
     private void setColumnType(ArrayList<String> sql, Class<?> type, String name) {
         if (type == Long.class) {
             sql.add(name + ID);

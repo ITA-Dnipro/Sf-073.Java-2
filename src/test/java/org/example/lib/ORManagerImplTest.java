@@ -1,16 +1,14 @@
 package org.example.lib;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
 import org.assertj.db.type.Request;
 import org.assertj.db.type.Table;
 import org.example.entity.Book;
 import org.example.entity.Publisher;
+import org.example.lib.exception.ORMException;
+import org.example.lib.utils.DBUtils;
 import org.junit.jupiter.api.*;
 
 import javax.sql.DataSource;
-import java.lang.reflect.InvocationTargetException;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -22,26 +20,14 @@ public class ORManagerImplTest {
 
     @BeforeAll
     static void setUp() throws Exception {
-        HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:h2:file:./src/test/db/test-db");
-        dataSource = new HikariDataSource(config);
-        orManager = ORManager.withDataSource(dataSource);
-
-        orManager.register(Publisher.class);
-        orManager.register(Book.class);
-        Book book = new Book("Test Book", LocalDate.now());
-        Publisher publisher = new Publisher("Test Publisher");
-        orManager.persist(book);
-        orManager.persist(publisher);
+        DBUtils.init();
+        dataSource = DBUtils.getDataSource();
+        orManager = DBUtils.getOrManager();
     }
 
     @AfterAll
-    static void dropDB() {
-        try {
-            dataSource.getConnection().prepareStatement("drop all objects").execute();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    static void clearDB() {
+        DBUtils.clear();
     }
 
     @Test
@@ -95,7 +81,7 @@ public class ORManagerImplTest {
 
     @Test
     @DisplayName("Find Publisher with id = 1")
-    void test_findById_when_requesting_should_return_publisherObject_with_id1() throws SQLException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+    void test_findById_when_requesting_should_return_publisherObject_with_id1() throws ORMException {
         Request request = new Request(dataSource, "select * from publishers where id = 1");
 
         Publisher publisher = orManager.findById(1, Publisher.class).get();
@@ -110,7 +96,7 @@ public class ORManagerImplTest {
 
     @Test
     @DisplayName("Find Book with id = 1")
-    void test_findById_when_requesting_should_return_bookObject_with_id1() throws SQLException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+    void test_findById_when_requesting_should_return_bookObject_with_id1() throws ORMException {
         Request request = new Request(dataSource, "select * from books where id = 1");
 
         Book book = orManager.findById(1, Book.class).get();
@@ -161,7 +147,7 @@ public class ORManagerImplTest {
 
     @Test
     @DisplayName("Find all Books in column title")
-    void test_findAll_when_requestingAllBooks_should_returnAllValues() throws Exception {
+    void test_findAll_when_requestingAllBooks_should_returnAllValues() {
 
         Request request = new Request(dataSource, "select * from books");
 
@@ -171,7 +157,7 @@ public class ORManagerImplTest {
 
     @Test
     @DisplayName("Find all Publishers in column name")
-    void test_findAll_when_requestingAllPublishers_should_returnAllValues() throws Exception {
+    void test_findAll_when_requestingAllPublishers_should_returnAllValues() {
         Request request = new Request(dataSource, "select * from publishers");
 
         assertThat(request).column("name")
