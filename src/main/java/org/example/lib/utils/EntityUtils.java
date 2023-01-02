@@ -7,8 +7,6 @@ import java.lang.reflect.*;
 import java.sql.PreparedStatement;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.time.Instant;
-import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -128,7 +126,21 @@ public class EntityUtils {
         return field.isAnnotationPresent(ManyToOne.class);
     }
 
-    public static <T> PreparedStatement setterPreparedStatementExecution(PreparedStatement statement, ResultSetMetaData resultSetMetaData,T o) throws SQLException, IllegalAccessException {
+    public static boolean hasOneToManyAnnotation(Field field) {
+        return field.isAnnotationPresent(OneToMany.class);
+    }
+
+    public static String getOneToManyMappedByValue(Field field){
+        if(field.isAnnotationPresent(OneToMany.class)){
+            String mappedBy = field.getAnnotation(OneToMany.class).mappedBy();
+            if (!mappedBy.equals("")) {
+                return mappedBy;
+            }
+        }
+        return field.getName();
+        }
+
+    public static <T> PreparedStatement setterPreparedStatementExecution(PreparedStatement statement, ResultSetMetaData resultSetMetaData, T o, Map<String, Object> associatedEntities) throws SQLException, IllegalAccessException {
         int columnCount = resultSetMetaData.getColumnCount();
         Field[] fields = o.getClass().getDeclaredFields();
         Map<String, List<Object>> collectFieldTypeValues = new HashMap<>();
@@ -136,18 +148,21 @@ public class EntityUtils {
             for (Field field : fields) {
                 field.setAccessible(true);
                 if (hasIdAndColumnAnnotation(field)) {
-                    String[] fieldRawType = field.getType().toString().split(" ");
-                    String fieldTypePretty = fieldRawType[1];
+                    String fieldType = field.getType().getName();
                     String columnTypeClassName = resultSetMetaData.getColumnClassName(i);
-                    EntityUtils.normalizeSqlToJavaTypesWithValues(collectFieldTypeValues, columnTypeClassName, fieldTypePretty, field, o);
+                    EntityUtils.normalizeSqlToJavaTypesWithValues(collectFieldTypeValues, columnTypeClassName, fieldType, field, o);
                 }
                 if(hasManyToOneAnnotation(field)){
                     if(field.get(o) == null){
                         break;
                     }
-                    String fieldTypePretty = "entity";
-                    String columnTypeClassName = resultSetMetaData.getColumnClassName(i);
-                    EntityUtils.normalizeSqlToJavaTypesWithValues(collectFieldTypeValues, columnTypeClassName, fieldTypePretty, field, o);
+                    if(field.get(o).getClass().isAnnotationPresent(Entity.class)){
+                        associatedEntities.put(field.getName(), field.get(o));
+                        String fieldTypePretty = "entity";
+                        String columnTypeClassName = resultSetMetaData.getColumnClassName(i);
+                        EntityUtils.normalizeSqlToJavaTypesWithValues(collectFieldTypeValues, columnTypeClassName, fieldTypePretty, field, o);
+                    }
+
                 }
             }
         }
@@ -179,6 +194,26 @@ public class EntityUtils {
             collectFieldTypeValues.put(EntityUtils.getFieldName(field), new ArrayList<>(Arrays.asList("java.lang.Long", id)));
         }
         return collectFieldTypeValues;
+    }
+
+    public static <T> void addNewRecordToAssociatedManyToOneCollection(T newRecord, ResultSetMetaData resultSetMetaData, Map<String, Object> associatedEntities) throws SQLException, IllegalAccessException {
+        int columnCount = resultSetMetaData.getColumnCount();
+        for (int i = 1; i <= columnCount; i++) {
+            if(associatedEntities.containsKey(resultSetMetaData.getColumnName(i).toLowerCase())){
+                Object associateEntity = associatedEntities.get(resultSetMetaData.getColumnName(i).toLowerCase());
+                Field[] fields = associateEntity.getClass().getDeclaredFields();
+                for (Field field:  fields) {
+                    field.setAccessible(true);
+                    if (EntityUtils.hasOneToManyAnnotation(field)) {
+                        if(Objects.equals(field.getType().getName(), "java.util.List") && field.get(associateEntity) != null){
+                            List<T> fieldValue = (List<T>)field.get(associateEntity);
+                            fieldValue.add(newRecord);
+                            field.set(associateEntity, fieldValue);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
