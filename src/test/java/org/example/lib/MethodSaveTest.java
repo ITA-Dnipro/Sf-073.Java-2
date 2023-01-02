@@ -12,10 +12,9 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
+
 import java.util.Properties;
 
-import static org.assertj.db.api.Assertions.assertThat;
 
 class MethodSaveTest {
     private static final Path path = Path.of(Constants.Connection.PROPERTIES_FILE_NAME);
@@ -63,9 +62,9 @@ class MethodSaveTest {
 
     @Test
     void should_Check_If_OneToMany_Object_Is_Present() throws Exception {
-        Publisher publisher = new Publisher("New Publisher Test16 @OneToMany");
+        Publisher publisher = new Publisher("New Publisher Test29 @OneToMany");
         Publisher pubFromDb = orManager.save(publisher);
-        Book book = new Book("Book With Publisher Test16", LocalDate.of(1998, 3, 24), pubFromDb);
+        Book book = new Book("Book With Publisher Test29", LocalDate.of(1998, 3, 24), pubFromDb);
         Book bookWithPublisher = orManager.save(book);
         System.out.println(bookWithPublisher);
         System.out.println(pubFromDb.getBooks());

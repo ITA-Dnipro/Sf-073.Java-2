@@ -15,15 +15,6 @@ import java.util.*;
 
 class EntityUtilsTest {
 
-
-    @Test
-    void should_Test_Method_getFieldValuesWithManyToOne_For_Correct_Types_Of_Objects() throws IllegalAccessException {
-        Book book1 = new Book("Test Book", LocalDate.of(2020, 3, 14));
-        List<Object> objectListFieldValues = EntityUtils.getFieldValuesWithManyToOne(book1);
-        objectListFieldValues.forEach(System.out::println);
-
-    }
-
     @Test
     void should_Test_Method_Normalize_SQL_To_Java_Types_With_Values() throws IllegalAccessException, NoSuchFieldException {
         Book book1 = new Book("Test Book1", LocalDate.of(2022, 3, 14));
