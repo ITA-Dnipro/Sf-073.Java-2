@@ -17,7 +17,7 @@ public class Book {
 
     // 2nd stage:
     @ManyToOne(columnName = "publisher_id")
-    Publisher publisher = null;
+    Publisher publisher;
 
     public Book() {
     }
@@ -25,6 +25,13 @@ public class Book {
     public Book(String title, LocalDate publishedAt) {
         this.title = title;
         this.publishedAt = publishedAt;
+    }
+
+    public Book(String title, LocalDate publishedAt, Publisher publisher) {
+        this();
+        this.title = title;
+        this.publishedAt = publishedAt;
+        this.publisher = publisher;
     }
 
     public Long getId() {

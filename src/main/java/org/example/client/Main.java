@@ -54,5 +54,35 @@ public class Main {
 
         System.out.println(orManager.findById(10, Book.class));
         System.out.println(orManager.findById(1, Publisher.class));
+
+        System.out.println("Save new Entity");
+        Book newBook = new Book("New Book", LocalDate.now());
+        Book newBook1 = new Book("New Book 1", LocalDate.of(2023, 1, 1), publisher1);
+        Book newBook2 = new Book("New Book 2", LocalDate.now(), null);
+        Publisher newPublisher = new Publisher("newPublisher");
+        Optional<Publisher> persistedPublisher = orManager.findById(1, Publisher.class);
+        System.out.println("Create book with persisted publisher");
+        Book newBook3 = new Book("New Book 3", LocalDate.now(), persistedPublisher.get());
+        System.out.println(newBook3);
+        System.out.println("----------------------------");
+
+        Book newBookRecord = orManager.save(newBook);
+        System.out.println(newBookRecord); // using findById for return from DB
+        Book newBook1Record = orManager.save(newBook1);
+        System.out.println(newBook1Record);
+        Book newBookRecord2 = orManager.save(newBook2);
+        System.out.println(newBookRecord2);
+        System.out.println("Save book with persisted publisher");
+        Book newBookRecord3 = orManager.save(newBook3);
+        System.out.println(newBookRecord3);
+        System.out.println("----------------------------");
+
+        Publisher newPublisherRecord = orManager.save(newPublisher);
+        System.out.println(newPublisherRecord);
+        System.out.println("Find All Books");
+        orManager.findAll(Book.class).forEach(System.out::println);
+        System.out.println("Find All Publishers");
+        orManager.findAll(Publisher.class).forEach(System.out::println);
+        System.out.println();
     }
 }
