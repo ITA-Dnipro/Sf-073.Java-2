@@ -1,6 +1,6 @@
 package configs;
 
-import org.example.configs.PropertyConfiguration;
+import org.example.lib.configs.PropertyConfiguration;
 import org.example.lib.utils.Constants;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

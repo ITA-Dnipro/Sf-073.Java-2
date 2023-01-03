@@ -1,12 +1,11 @@
 package org.example.client;
 
 import com.zaxxer.hikari.HikariDataSource;
-import org.example.entity.Book;
-import org.example.entity.Publisher;
+import org.example.client.entity.Book;
+import org.example.client.entity.Publisher;
 import org.example.lib.ORManager;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 public class Main {
@@ -30,14 +29,14 @@ public class Main {
         Publisher publisher3 = new Publisher("MyPub2");
         Publisher publisher4 = new Publisher("MyPub3");
 
-//        orManager.persist(book6);
-//        orManager.persist(book2);
-//        orManager.persist(book3);
-//        orManager.persist(book4);
-//        orManager.persist(publisher1);
-//        orManager.persist(publisher2);
-//        orManager.persist(publisher3);
-//        orManager.persist(publisher4);
+        orManager.persist(book6);
+        orManager.persist(book2);
+        orManager.persist(book3);
+        orManager.persist(book4);
+        orManager.persist(publisher1);
+        orManager.persist(publisher2);
+        orManager.persist(publisher3);
+        orManager.persist(publisher4);
 
         System.out.println("Find All Books");
         orManager.findAll(Book.class).forEach(System.out::println);

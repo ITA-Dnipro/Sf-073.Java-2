@@ -2,13 +2,14 @@ package org.example.lib;
 
 import org.assertj.db.type.Request;
 import org.assertj.db.type.Table;
-import org.example.entity.Book;
-import org.example.entity.Publisher;
+import org.example.client.entity.Book;
+import org.example.client.entity.Publisher;
 import org.example.lib.exception.ORMException;
 import org.example.lib.utils.DBUtils;
 import org.junit.jupiter.api.*;
 
 import javax.sql.DataSource;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -18,15 +19,16 @@ public class ORManagerImplTest {
     private static DataSource dataSource;
     private static ORManager orManager;
 
+
     @BeforeAll
-    static void setUp() throws Exception {
+    static void setUp() throws SQLException, ORMException {
         DBUtils.init();
         dataSource = DBUtils.getDataSource();
         orManager = DBUtils.getOrManager();
     }
 
     @AfterAll
-    static void clearDB() {
+    static void clearDB() throws SQLException {
         DBUtils.clear();
     }
 
@@ -40,7 +42,7 @@ public class ORManagerImplTest {
 
     @Test
     @DisplayName("Returns all Books Columns correctly")
-    void test_when_tableBookExist_should_return_membersCorrectly() {
+    void test_when_tableBookExist_should_return_columnNamesCorrectly() {
         Table table = new Table(dataSource, "books");
 
         assertThat(table).column(0).hasColumnName("id")
@@ -51,7 +53,7 @@ public class ORManagerImplTest {
 
     @Test
     @DisplayName("Returns all Publishers Columns correctly")
-    void test_when_tablePublisherExist_should_return_membersCorrectly() {
+    void test_when_tablePublisherExist_should_return_columnNamesCorrectly() {
         Table table = new Table(dataSource, "publishers");
 
         assertThat(table).column(0).hasColumnName("id")
@@ -143,7 +145,6 @@ public class ORManagerImplTest {
 
         assertThat(request).equals(expected);
     }
-
 
     @Test
     @DisplayName("Find all Books in column title")

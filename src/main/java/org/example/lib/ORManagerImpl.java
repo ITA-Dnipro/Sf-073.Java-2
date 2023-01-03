@@ -34,7 +34,6 @@ public class ORManagerImpl implements ORManager {
     @Override
     public void register(Class<?>... entityClasses) throws ORMException {
         for (Class<?> cls : entityClasses) {
-
             if (cls.isAnnotationPresent(Entity.class)) {
                 String tableName = EntityUtils.getTableName(cls);
                 Field[] declaredFields = cls.getDeclaredFields();
@@ -54,7 +53,6 @@ public class ORManagerImpl implements ORManager {
 
                 String sqlCreateTable = String.format("%s %s(%s);", CREATE_TABLE, tableName,
                         String.join(", ", sql));
-
                 try (var prepStmt = getConnection().prepareStatement(sqlCreateTable)) {
                     prepStmt.executeUpdate();
                 } catch (SQLException exception) {
@@ -136,7 +134,6 @@ public class ORManagerImpl implements ORManager {
         try {
             PreparedStatement preparedStatement = getConnection().prepareStatement(sql);
             ResultSet resultSet = preparedStatement.executeQuery();
-
             while (resultSet.next()) {
                 T obj = cls.getConstructor().newInstance();
                 Field[] declaredFields = obj.getClass().getDeclaredFields();

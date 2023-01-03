@@ -1,6 +1,6 @@
 package org.example.lib;
 
-import org.example.configs.*;
+import org.example.lib.configs.*;
 import org.example.lib.exception.ExistingObjectException;
 import org.example.lib.exception.ORMException;
 import org.example.lib.utils.ConnectionUtils;
@@ -25,7 +25,7 @@ public interface ORManager {
     }
 
     // generate the schema in the DB
-    // for given list of org.example.entity classes (and all related
+    // for given list of org.example.client.entity classes (and all related
     //  by OneToMany/ManyToOne) create a schema in DB
     void register(Class<?>... entityClasses) throws ORMException;
 

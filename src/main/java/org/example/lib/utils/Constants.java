@@ -8,8 +8,8 @@ public static final class Connection{
 
     private Connection() {}
 
-    public static final String PROPERTIES_FILE_NAME = "h2mem-test.properties";
-//    public static final String PROPERTIES_FILE_NAME = "orm.properties";
+//    public static final String PROPERTIES_FILE_NAME = "h2mem-test.properties";
+    public static final String PROPERTIES_FILE_NAME = "orm.properties";
     public static final String URL = "orm.connection.url";
     public static final String USERNAME = "orm.connection.username";
     public static final String PASSWORD = "orm.connection.password";

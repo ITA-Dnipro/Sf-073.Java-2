@@ -2,8 +2,8 @@ package org.example.lib.utils;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import org.example.entity.Book;
-import org.example.entity.Publisher;
+import org.example.client.entity.Book;
+import org.example.client.entity.Publisher;
 import org.example.lib.ORManager;
 import org.example.lib.exception.ORMException;
 
@@ -12,7 +12,6 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 
 public class DBUtils {
-
     private static DataSource dataSource;
     private static ORManager orManager;
 
@@ -38,11 +37,8 @@ public class DBUtils {
         return orManager;
     }
 
-    public static void clear() {
-        try {
-            dataSource.getConnection().prepareStatement("drop all objects").execute();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    public static void clear() throws SQLException {
+        dataSource.getConnection().prepareStatement("drop all objects").execute();
+
     }
 }
