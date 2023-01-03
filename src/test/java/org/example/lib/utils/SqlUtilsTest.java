@@ -8,11 +8,10 @@ import org.example.lib.ORManagerImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.sql.Connection;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.LocalDate;
 
-public class SqlUtilsTest {
+class SqlUtilsTest {
 
     private static Connection connection;
 
