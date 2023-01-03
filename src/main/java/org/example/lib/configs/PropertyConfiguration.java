@@ -1,4 +1,4 @@
-package org.example.configs;
+package org.example.lib.configs;
 
 import java.io.IOException;
 import java.io.InputStream;

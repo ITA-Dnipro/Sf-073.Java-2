@@ -1,4 +1,4 @@
-package org.example.entity;
+package org.example.client.entity;
 
 import org.example.lib.annotation.*;
 

@@ -2,9 +2,9 @@ package org.example.lib;
 
 import com.zaxxer.hikari.HikariDataSource;
 import org.assertj.db.type.*;
-import org.example.configs.PropertyConfiguration;
-import org.example.entity.Book;
-import org.example.entity.Publisher;
+import org.example.lib.configs.PropertyConfiguration;
+import org.example.client.entity.Book;
+import org.example.client.entity.Publisher;
 import org.example.lib.utils.*;
 import org.junit.jupiter.api.*;
 

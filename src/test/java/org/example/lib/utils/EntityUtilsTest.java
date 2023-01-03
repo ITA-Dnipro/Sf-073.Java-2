@@ -1,17 +1,10 @@
 package org.example.lib.utils;
 
-import org.example.entity.Book;
-import org.example.entity.Publisher;
-import org.example.lib.annotation.Column;
-import org.example.lib.annotation.Id;
-import org.example.lib.annotation.ManyToOne;
-import org.example.lib.annotation.OneToMany;
-import org.junit.jupiter.api.Assertions;
+import org.example.client.entity.Book;
+import org.example.client.entity.Publisher;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Field;
 import java.time.LocalDate;
-import java.util.*;
 
 class EntityUtilsTest {
 

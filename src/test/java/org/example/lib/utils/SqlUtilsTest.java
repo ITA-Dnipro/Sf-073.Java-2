@@ -1,8 +1,8 @@
 package org.example.lib.utils;
 
 import com.zaxxer.hikari.HikariDataSource;
-import org.example.entity.Book;
-import org.example.entity.Publisher;
+import org.example.client.entity.Book;
+import org.example.client.entity.Publisher;
 import org.example.lib.ORManager;
 import org.example.lib.ORManagerImpl;
 import org.junit.jupiter.api.Assertions;

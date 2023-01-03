@@ -1,15 +1,16 @@
 package org.example.lib;
 
-import com.zaxxer.hikari.HikariDataSource;
 import org.assertj.db.type.Request;
 import org.assertj.db.type.Table;
-import org.example.configs.HikariCPDataSource;
-import org.example.entity.Book;
-import org.example.entity.Publisher;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.example.client.entity.Book;
+import org.example.client.entity.Publisher;
+import org.example.lib.exception.ORMException;
+import org.example.lib.utils.DBUtils;
+import org.junit.jupiter.api.*;
 
 import javax.sql.DataSource;
+import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.db.api.Assertions.assertThat;
@@ -18,84 +19,149 @@ public class ORManagerImplTest {
     private static DataSource dataSource;
     private static ORManager orManager;
 
+
     @BeforeAll
-    static void setUp() throws Exception {
-        dataSource = HikariCPDataSource.getHikariDatasourceConfiguration(new HikariDataSource());
-        orManager = ORManager.withDataSource(new HikariDataSource());
+    static void setUp() throws SQLException, ORMException {
+        DBUtils.init();
+        dataSource = DBUtils.getDataSource();
+        orManager = DBUtils.getOrManager();
+    }
+
+    @AfterAll
+    static void clearDB() throws SQLException {
+        DBUtils.clear();
     }
 
     @Test
+    @DisplayName("Non existing table")
     void test_when_tableDoesNotExist_should_return_tableDoesNotExist() {
-        Table table = new Table(dataSource, "TEST");
+        Table table = new Table(dataSource, "tests");
+
         assertThat(table).doesNotExist();
     }
 
     @Test
-    void test_when_tableBookExist_should_return_tableExist() {
-        Table table = new Table(dataSource, "BOOK");
-        assertThat(table).exists();
-    }
+    @DisplayName("Returns all Books Columns correctly")
+    void test_when_tableBookExist_should_return_columnNamesCorrectly() {
+        Table table = new Table(dataSource, "books");
 
-    @Test
-    void test_when_tablePublisherExist_should_return_tableExist() {
-        Table table = new Table(dataSource, "PUBLISHER");
-        assertThat(table).exists();
-    }
-
-    @Test
-    void test_when_tableBookExist_should_return_membersCorrectly() {
-        Table table = new Table(dataSource, "BOOK");
         assertThat(table).column(0).hasColumnName("id")
                          .column(1).hasColumnName("title")
-                         .column(2).hasColumnName("published_at");
+                         .column(2).hasColumnName("published_at")
+                         .column(3).hasColumnName("publisher_id");
     }
 
     @Test
-    void test_when_tablePublisherExist_should_return_membersCorrectly() {
-        Table table = new Table(dataSource, "PUBLISHER");
+    @DisplayName("Returns all Publishers Columns correctly")
+    void test_when_tablePublisherExist_should_return_columnNamesCorrectly() {
+        Table table = new Table(dataSource, "publishers");
+
         assertThat(table).column(0).hasColumnName("id")
                          .column(1).hasColumnName("name");
     }
 
     @Test
+    @DisplayName("Persisted publisher exists")
+    void test_persistedPublisher_should_return_firstRowValuesCorrectly() {
+        Request request = new Request(dataSource, "select * from publishers");
+
+        assertThat(request).row(0)
+                           .value().isEqualTo(1)
+                           .value().isEqualTo("Test Publisher");
+    }
+
+    @Test
+    @DisplayName("Persisted book exists")
+    void test_persistedBook_should_return_firstRowValuesCorrectly() {
+        Request request = new Request(dataSource, "select * from books");
+
+        assertThat(request).row(0)
+                           .value().isEqualTo(1)
+                           .value().isEqualTo("Test Book")
+                           .value().isEqualTo(LocalDate.now());
+    }
+
+    @Test
+    @DisplayName("Find Publisher with id = 1")
+    void test_findById_when_requesting_should_return_publisherObject_with_id1() throws ORMException {
+        Request request = new Request(dataSource, "select * from publishers where id = 1");
+
+        Publisher publisher = orManager.findById(1, Publisher.class).get();
+
+        assertThat(request).column("id")
+                           .value().isEqualTo(1)
+                           .column("name")
+                           .value().isEqualTo("Test Publisher");
+
+        assertThat(request).equals(publisher);
+    }
+
+    @Test
+    @DisplayName("Find Book with id = 1")
+    void test_findById_when_requesting_should_return_bookObject_with_id1() throws ORMException {
+        Request request = new Request(dataSource, "select * from books where id = 1");
+
+        Book book = orManager.findById(1, Book.class).get();
+
+        assertThat(request).equals(book);
+    }
+
+    @Test
+    @DisplayName("Find all books count in the table")
     void test_findAll_when_requestingAllBooks_should_returnNumberOfRowsCorrectly() throws Exception {
+        Request request = new Request(dataSource, "select * from books");
+
         List<Book> expected = orManager.findAll(Book.class);
 
-        Request request = new Request(dataSource, "select * from book");
-
         assertThat(request).hasNumberOfRows(expected.size());
     }
 
     @Test
+    @DisplayName("Find all publishers count in the table")
     void test_findAll_when_requestingAllPublishers_should_returnNumberOfRowsCorrectly() throws Exception {
+        Request request = new Request(dataSource, "select * from publishers");
+
         List<Publisher> expected = orManager.findAll(Publisher.class);
 
-        Request request = new Request(dataSource, "select * from publisher");
-
         assertThat(request).hasNumberOfRows(expected.size());
     }
 
     @Test
-    void test_findAll_when_requestingAllBooks_should_returnAllValues() throws Exception {
+    @DisplayName("Find all books")
+    void test_findAll_when_requestingAllBooks_should_return_AllBooksCorrectly() throws Exception {
+        Request request = new Request(dataSource, "select * from books");
 
-        Request request = new Request(dataSource, "select * from book");
+        List<Book> expected = orManager.findAll(Book.class);
 
-        assertThat(request).column("title")
-                           .containsValues("Solaris",
-                                           "Just Book",
-                                           "Just Book 2",
-                                           "Just Book 3");
+        assertThat(request).equals(expected);
     }
 
     @Test
-    void test_findAll_when_requestingAllPublishers_should_returnAllValues() throws Exception {
+    @DisplayName("Find all publishers")
+    void test_findAll_when_requestingAllPublishers_should_return_AllBooksCorrectly() throws Exception {
+        Request request = new Request(dataSource, "select * from publishers");
 
-        Request request = new Request(dataSource, "select * from publisher");
+        List<Publisher> expected = orManager.findAll(Publisher.class);
+
+        assertThat(request).equals(expected);
+    }
+
+    @Test
+    @DisplayName("Find all Books in column title")
+    void test_findAll_when_requestingAllBooks_should_returnAllValues() {
+
+        Request request = new Request(dataSource, "select * from books");
+
+        assertThat(request).column("title")
+                           .containsValues("Test Book");
+    }
+
+    @Test
+    @DisplayName("Find all Publishers in column name")
+    void test_findAll_when_requestingAllPublishers_should_returnAllValues() {
+        Request request = new Request(dataSource, "select * from publishers");
 
         assertThat(request).column("name")
-                           .containsValues("Just Publisher",
-                                           "MyPub1",
-                                           "MyPub2",
-                                           "MyPub3");
+                           .containsValues("Test Publisher");
     }
 }
