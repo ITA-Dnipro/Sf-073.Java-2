@@ -94,11 +94,7 @@ public class ORManagerImpl implements ORManager {
                 }
             }
         }else{
-            long entityId = EntityUtils.getId(o);
-            Optional<T> optRecord = (Optional<T>) Optional.ofNullable(findById(entityId, o.getClass())).orElseThrow();
-            if(optRecord.isPresent()){
-                newRecord = (T) optRecord.get();
-            }
+            newRecord = merge(o);
         }
         return newRecord;
     }
