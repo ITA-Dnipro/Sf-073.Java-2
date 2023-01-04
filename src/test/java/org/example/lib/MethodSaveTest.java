@@ -11,6 +11,7 @@ import org.junit.jupiter.api.*;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import java.util.Properties;
@@ -60,10 +61,16 @@ class MethodSaveTest {
 
     @Test
     void should_Check_If_OneToMany_Object_Is_Present() throws Exception {
-        Publisher publisher = new Publisher("New Publisher Test29 @OneToMany");
+        Publisher publisher = new Publisher("New Publisher Test32 @OneToMany");
+        Publisher obj = Publisher.class.getConstructor().newInstance();
         Publisher pubFromDb = orManager.save(publisher);
-        Book book = new Book("Book With Publisher Test29", LocalDate.of(1998, 3, 24), pubFromDb);
+        Book book = new Book("Book With Publisher Test32", LocalDate.of(1998, 3, 24), pubFromDb);
         Book bookWithPublisher = orManager.save(book);
+        List<Book> bookList = new ArrayList<>();
+        bookList.add(book);
+
+        obj.setName("pub_test");
+        System.out.println(obj);
         System.out.println(bookWithPublisher);
         System.out.println(pubFromDb.getBooks());
     }
