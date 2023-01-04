@@ -284,5 +284,11 @@ public class EntityUtils {
             }
         }
     }
+
+    public static String getIdFieldName(Class<?> cls) {
+        return "id";
+    }
+
+
 }
 
