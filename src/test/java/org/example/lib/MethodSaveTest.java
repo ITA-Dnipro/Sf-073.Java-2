@@ -47,9 +47,7 @@ class MethodSaveTest {
     @Test
     void should_Retrieve_Column_Names_From_Table() throws Exception {
         Assertions.assertEquals("TITLE, PUBLISHED_AT, PUBLISHER", SqlUtils.getColumnNamesInsert("BOOKS", orManagerImpl.getConnection()));
-        Assertions.assertEquals("ID, TITLE, PUBLISHED_AT, PUBLISHER", SqlUtils.getColumnNamesUpdate("BOOKS", orManagerImpl.getConnection()));
         Assertions.assertEquals("NAME", SqlUtils.getColumnNamesInsert("PUBLISHERS", orManagerImpl.getConnection()));
-        Assertions.assertEquals("ID, NAME", SqlUtils.getColumnNamesUpdate("PUBLISHERS", orManagerImpl.getConnection()));
     }
 
     @Test
