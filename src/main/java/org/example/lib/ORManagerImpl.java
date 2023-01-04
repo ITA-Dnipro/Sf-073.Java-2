@@ -64,12 +64,12 @@ public class ORManagerImpl implements ORManager {
     }
 
     @Override
-    public <T> T save(T o) throws ORMException {
+    public <T> T save(T o) throws ORMException, ExistingObjectException {
         long id = 0L;
         T newRecord = null;
         Map<String, Object> associatedEntities = new HashMap<>();
         if(!EntityUtils.hasId(o)){
-            try(PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, o.getClass(), connection),
+            try(PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, connection),
                     Statement.RETURN_GENERATED_KEYS);
                 PreparedStatement stBefore = connection.prepareStatement(SqlUtils.selectFirstFromTable(o.getClass()))) {
                 ResultSetMetaData resultSetMetaData = stBefore.getMetaData();
