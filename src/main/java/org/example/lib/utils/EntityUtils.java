@@ -18,7 +18,7 @@ public class EntityUtils {
     private static final String DATE = " DATE NOT NULL";
     private static final String LONG = " BIGINT NOT NULL";
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(EntityUtils.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EntityUtils.class);
 
     private EntityUtils() {
     }
@@ -186,6 +186,17 @@ public class EntityUtils {
         return id;
     }
 
+    public static String getIdType(Class<?> cls) {
+       Field[] fields = cls.getDeclaredFields();
+       String fieldType = null;
+       for (Field field:fields){
+           if(field.isAnnotationPresent(Id.class)){
+               fieldType = field.getType().getName();
+           }
+       }
+        return fieldType;
+    }
+
     public static boolean hasIdAndColumnAnnotation(Field field) {
         return field.isAnnotationPresent(Column.class) ||
                 field.isAnnotationPresent(Id.class);
@@ -199,15 +210,21 @@ public class EntityUtils {
         return field.isAnnotationPresent(OneToMany.class);
     }
 
-    public static String getOneToManyMappedByValue(Field field){
-        if(field.isAnnotationPresent(OneToMany.class)){
-            String mappedBy = field.getAnnotation(OneToMany.class).mappedBy();
-            if (!mappedBy.equals("")) {
-                return mappedBy;
+    public static String getOneToManyMappedByValue(Class<?> cls){
+        Field[] fields = cls.getDeclaredFields();
+        String result = null;
+        for (Field field: fields){
+            if(field.isAnnotationPresent(OneToMany.class)){
+                String mappedBy = field.getAnnotation(OneToMany.class).mappedBy();
+                if (!mappedBy.equals("")) {
+                    result =  mappedBy;
+                }else{
+                    result = field.getName();
+                }
             }
         }
-        return field.getName();
-        }
+        return result;
+    }
 
     public static <T> PreparedStatement setterPreparedStatementExecution(PreparedStatement statement, ResultSetMetaData resultSetMetaData, T o, Map<String, Object> associatedEntities) throws SQLException, IllegalAccessException {
         int columnCount = resultSetMetaData.getColumnCount();
@@ -231,7 +248,6 @@ public class EntityUtils {
                         String columnTypeClassName = resultSetMetaData.getColumnClassName(i);
                         EntityUtils.normalizeSqlToJavaTypesWithValues(collectFieldTypeValues, columnTypeClassName, fieldTypePretty, field, o);
                     }
-
                 }
             }
         }
@@ -287,6 +303,22 @@ public class EntityUtils {
 
     public static String getIdFieldName(Class<?> cls) {
         return "id";
+    }
+
+    public static <T> Map<String, List<Object>> collectEntityFieldTypeValues(T object) throws IllegalAccessException {
+        Map<String, List<Object>> entityFieldTypeValues = new HashMap<>();
+        Field[] entityFields = object.getClass().getDeclaredFields();
+        for (Field field: entityFields){
+            field.setAccessible(true);
+            if (hasIdAndColumnAnnotation(field)){
+                entityFieldTypeValues.put(getFieldName(field), new ArrayList<>(Arrays.asList(field.getType().getName(), field.get(object))));
+            }
+            if(hasManyToOneAnnotation(field) && field.get(object).getClass().isAnnotationPresent(Entity.class)){
+                Class<?> fieldClass = field.get(object).getClass();
+                entityFieldTypeValues.put(getOneToManyMappedByValue(fieldClass), new ArrayList<>(Arrays.asList(getIdType(fieldClass), field.get(object))));
+            }
+        }
+        return entityFieldTypeValues;
     }
 
 
