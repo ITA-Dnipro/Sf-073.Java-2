@@ -31,9 +31,11 @@ class SqlUtilsTest {
         Publisher publisher = new Publisher("Publisher Test 1");
 
         Assertions.assertEquals("INSERT INTO books (TITLE, PUBLISHED_AT, PUBLISHER) VALUES ( ?, ?, ?)",
-                SqlUtils.saveQuery(book, Book.class, connection));
+                SqlUtils.saveQuery(book, connection));
         Assertions.assertEquals("INSERT INTO publishers (NAME) VALUES ( ?)",
-                SqlUtils.saveQuery(publisher, Publisher.class, connection));
-
+                SqlUtils.saveQuery(publisher, connection));
     }
+
+
+
 }
