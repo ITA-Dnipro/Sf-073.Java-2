@@ -64,7 +64,7 @@ public class ORManagerImpl implements ORManager {
     }
 
     @Override
-    public <T> T save(T o) throws ORMException {
+    public <T> T save(T o) throws ExistingObjectException, ORMException {
         long id = 0L;
         T newRecord = null;
         Map<String, Object> associatedEntities = new HashMap<>();
@@ -83,14 +83,14 @@ public class ORManagerImpl implements ORManager {
                 if(optRecord.isPresent()){
                     newRecord = (T) optRecord.get();
                     EntityUtils.addNewRecordToAssociatedManyToOneCollection(newRecord, resultSetMetaData, associatedEntities);
-                    LOGGER.info(String.format("Successfully added %s to the database", newRecord));
-
+                    String successMessage = "Successfully added" + newRecord + "to the database";
+                    LOGGER.info(successMessage);
                 }
             }catch(SQLException | IllegalAccessException ex){
                 if(ex.getClass().getTypeName().equals("org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException")){
                     LOGGER.error(String.format("SQL exception: org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException saving %s", o.getClass()));
                     LOGGER.info("Possible reason: columns with key constraints NON NULL || UNIQUE prevent saving this record");
-                    LOGGER.info("Possible solution: provide non existing entity or check for duplicate constraint fields");
+                    throw  new ExistingObjectException("Please provide non existing entity or check for duplicate constraint fields");
                 }
             }
         }else{
