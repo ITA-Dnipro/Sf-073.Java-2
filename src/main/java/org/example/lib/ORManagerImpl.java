@@ -83,6 +83,7 @@ public class ORManagerImpl implements ORManager {
                 if(optRecord.isPresent()){
                     newRecord = (T) optRecord.get();
                     EntityUtils.addNewRecordToAssociatedManyToOneCollection(newRecord, resultSetMetaData, associatedEntities);
+                    LOGGER.info(String.format("Successfully added %s to the database", newRecord));
 
                 }
             }catch(SQLException | IllegalAccessException ex){
