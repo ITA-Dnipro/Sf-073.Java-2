@@ -8,16 +8,27 @@ public class SqlUtils {
     private SqlUtils() {
     }
 
-    public static String saveQuery(Object o, Class<?> cls, Connection connection) throws SQLException {
+    public static String saveQuery(Object o, Connection connection) throws SQLException {
         return "INSERT INTO " +
-                EntityUtils.getTableName(cls) +
+                EntityUtils.getTableName(o.getClass()) +
                 " (" +
-                getColumnNamesInsert(EntityUtils.getTableName(cls), connection) +
+                getColumnNamesInsert(EntityUtils.getTableName(o.getClass()), connection) +
                 ") " +
                 "VALUES" +
                 " (" +
-                generatePlaceholdersForSave(getResultSetMetaData(EntityUtils.getTableName(cls), connection)) +
+                generatePlaceholdersForSave(getResultSetMetaData(EntityUtils.getTableName(o.getClass()), connection)) +
                 ")";
+    }
+
+    public static String updateQuery(Object o, Connection connection) throws SQLException {
+        return "UPDATE " +
+                EntityUtils.getTableName(o.getClass()) +
+                " SET " +
+                generateColumnNamesWithPlaceholdersForUpdate(EntityUtils.getTableName(o.getClass()), connection) +
+                " WHERE " +
+                EntityUtils.getTableName(o.getClass()) + "." + EntityUtils.getIdFieldName(o.getClass()) +
+                " = " +
+                EntityUtils.getId(o);
     }
 
     public static String findByIdQuery(Long id, Class<?> cls) {
@@ -49,13 +60,13 @@ public class SqlUtils {
         return String.join(", ", columnNames);
     }
 
-    public static String getColumnNamesUpdate(String tableName, Connection connection) throws SQLException {
+    public static List<String> getColumnNamesUpdate(String tableName, Connection connection) throws SQLException {
         List<String> columnNames = new ArrayList<>();
         int columnCount = getResultSetMetaData(tableName, connection).getColumnCount();
         for (int i = 1; i <= columnCount; i++) {
             columnNames.add(getResultSetMetaData(tableName, connection).getColumnName(i));
         }
-        return String.join(", ", columnNames);
+        return columnNames;
     }
 
     public static String generatePlaceholdersForSave(ResultSetMetaData resultSetMetaData) throws SQLException {
@@ -64,5 +75,16 @@ public class SqlUtils {
         sb.append(" ?,".repeat(Math.max(0, columnCount)));
         sb.deleteCharAt(sb.length()-1);
         return sb.toString();
+    }
+
+    public static String generateColumnNamesWithPlaceholdersForUpdate(String tableName, Connection connection) throws SQLException {
+
+        var sb = new StringBuilder();
+        for (int i = 1; i < getColumnNamesUpdate(tableName, connection).size(); i++) {
+            sb.append(getColumnNamesUpdate(tableName, connection).get(i)).append(" = ?, ");
+        }
+        sb.delete(sb.length()-2, sb.length());
+        return sb.toString();
+
     }
 }
