@@ -5,6 +5,8 @@ import java.util.*;
 
 public class SqlUtils {
 
+    private static final String SELECT_ALL_FROM = "SELECT * FROM ";
+
     private SqlUtils() {
     }
 
@@ -31,21 +33,23 @@ public class SqlUtils {
                 EntityUtils.getId(o);
     }
 
-    public static String findByIdQuery(Long id, Class<?> cls) {
-        return "SELECT * FROM " +
-                EntityUtils.getTableName(cls) +
-                "WHERE" +
-                " id = " + id;
+    public static String findByIdQuery(Object o) {
+        return SELECT_ALL_FROM +
+                EntityUtils.getTableName(o.getClass()) +
+                " WHERE " +
+                EntityUtils.getTableName(o.getClass()) + "." + EntityUtils.getIdFieldName(o.getClass()) +
+                " = " +
+                EntityUtils.getId(o);
     }
 
     public static String selectFirstFromTable(Class<?> cls) {
-        return "SELECT * FROM " +
+        return SELECT_ALL_FROM +
                 EntityUtils.getTableName(cls) +
                 " LIMIT 1";
     }
 
     public static ResultSetMetaData getResultSetMetaData(String tableName, Connection connection) throws SQLException {
-        String query = "SELECT * FROM " + tableName + " LIMIT 1";
+        String query = SELECT_ALL_FROM + tableName + " LIMIT 1";
         Statement statement = connection.createStatement();
         ResultSet resultSet = statement.executeQuery(query);
         return resultSet.getMetaData();
@@ -73,7 +77,7 @@ public class SqlUtils {
         int columnCount = resultSetMetaData.getColumnCount() - 1;
         var sb = new StringBuilder();
         sb.append(" ?,".repeat(Math.max(0, columnCount)));
-        sb.deleteCharAt(sb.length()-1);
+        sb.deleteCharAt(sb.length() - 1);
         return sb.toString();
     }
 
@@ -83,7 +87,7 @@ public class SqlUtils {
         for (int i = 1; i < getColumnNamesUpdate(tableName, connection).size(); i++) {
             sb.append(getColumnNamesUpdate(tableName, connection).get(i)).append(" = ?, ");
         }
-        sb.delete(sb.length()-2, sb.length());
+        sb.delete(sb.length() - 2, sb.length());
         return sb.toString();
 
     }
