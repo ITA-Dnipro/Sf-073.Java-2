@@ -14,7 +14,7 @@ public class Publisher {
     @Column()
     private String name;
 
-    @OneToMany(mappedBy = "publisher")
+    @OneToMany(mappedBy = "publishers")
     private List<Book> books;
 
     public Publisher() {
