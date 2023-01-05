@@ -79,13 +79,11 @@ public class ORManagerImpl implements ORManager {
                 while (keys.next()) {
                     id = keys.getLong("id");
                 }
-                Optional<T> optRecord = (Optional<T>) Optional.ofNullable(findById(id, o.getClass())).orElseThrow();
-                if(optRecord.isPresent()){
-                    newRecord = (T) optRecord.get();
-                    EntityUtils.addNewRecordToAssociatedManyToOneCollection(newRecord, resultSetMetaData, associatedEntities);
-                    String successMessage = "Successfully added" + newRecord + "to the database";
-                    LOGGER.info(successMessage);
-                }
+                Optional<?> optionalRecord = findById(id, o.getClass());
+                newRecord = optionalRecord.map(value -> (T) value).orElse(o);;
+                EntityUtils.addNewRecordToAssociatedManyToOneCollection(newRecord, resultSetMetaData, associatedEntities);
+                String successMessage = "Successfully added" + newRecord + "to the database";
+                LOGGER.info(successMessage);
             }catch(SQLException | IllegalAccessException ex){
                 if(ex.getClass().getTypeName().equals("org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException")){
                     LOGGER.error(String.format("SQL exception: org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException saving %s", o.getClass()));
