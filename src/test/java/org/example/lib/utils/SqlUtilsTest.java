@@ -37,6 +37,12 @@ class SqlUtilsTest {
                 SqlUtils.saveQuery(publisher, connection));
     }
 
+    @Test
+    void should_Retrieve_Column_Names_From_Table() throws Exception {
+        Assertions.assertEquals("TITLE, PUBLISHED_AT, PUBLISHER", SqlUtils.getColumnNamesInsert("BOOKS", connection));
+        Assertions.assertEquals("NAME", SqlUtils.getColumnNamesInsert("PUBLISHERS", connection));
+    }
+
 
 
 }
