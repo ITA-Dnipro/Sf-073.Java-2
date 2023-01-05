@@ -80,7 +80,7 @@ public class ORManagerImpl implements ORManager {
                     id = keys.getLong("id");
                 }
                 Optional<?> optionalRecord = findById(id, o.getClass());
-                newRecord = optionalRecord.map(value -> (T) value).orElse(o);;
+                newRecord = optionalRecord.map(value -> (T) value).orElse(o);
                 EntityUtils.addNewRecordToAssociatedManyToOneCollection(newRecord, resultSetMetaData, associatedEntities);
                 String successMessage = "Successfully added" + newRecord + "to the database";
                 LOGGER.info(successMessage);
@@ -92,7 +92,8 @@ public class ORManagerImpl implements ORManager {
                 }
             }
         }else{
-            newRecord = merge(o);
+            Optional<?> optionalRecord = findById(EntityUtils.getId(o), o.getClass());
+            newRecord = optionalRecord.map(value -> (T) value).orElse(o);
         }
         return newRecord;
     }
