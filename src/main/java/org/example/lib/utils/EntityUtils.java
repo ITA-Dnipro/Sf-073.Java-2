@@ -321,6 +321,19 @@ public class EntityUtils {
         return entityFieldTypeValues;
     }
 
+    public static <T> Map<String, List<Object>> collectRecordColumnTypeValues(ResultSet rs, ResultSetMetaData rsMetaData) throws SQLException {
+        Map<String, List<Object>> recordColumnTypeValues = new HashMap<>();
+        int columnCount = rsMetaData.getColumnCount();
+        for (int i = 1; i <= columnCount ; i++) {
+            recordColumnTypeValues.put(rsMetaData.getColumnName(i).toLowerCase(), new ArrayList<>(Arrays.asList(rsMetaData.getColumnClassName(i), rs.getObject(i))));
+        }
+        return recordColumnTypeValues;
+    }
 
+    public static <T> ResultSet updateResultSetExecution(T o, ResultSet rs, ResultSetMetaData rsMetaData) {
+
+
+        return rs;
+    }
 }
 
