@@ -83,5 +83,11 @@ public class Main {
         System.out.println("Find All Publishers");
         orManager.findAll(Publisher.class).forEach(System.out::println);
         System.out.println();
+
+        System.out.println("Delete publisher4 with name = MyPub3");
+        orManager.delete(publisher4);
+
+        System.out.println("Delete book6 with title = new book");
+        orManager.delete(book6);
     }
 }

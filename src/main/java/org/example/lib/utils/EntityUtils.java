@@ -61,8 +61,8 @@ public class EntityUtils {
                 }
             }
         } catch (IllegalAccessException exception) {
-            LOGGER.debug("Cannot get the values the entity");
-            throw new ORMException("An error has occurred");
+            LOGGER.debug("Cannot get the values from the entity");
+            throw new ORMException("Cannot get the values from the entity");
         }
 
         return String.join(",", result);
@@ -96,7 +96,7 @@ public class EntityUtils {
                 .collect(Collectors.joining(","));
     }
 
-    public static  <T> T fillData(T entity, Field field, String value) {
+    public static <T> T fillData(T entity, Field field, String value) {
         field.setAccessible(true);
         try {
             if (field.getType() == long.class || field.getType() == Long.class) {
@@ -110,8 +110,7 @@ public class EntityUtils {
 
             }
         } catch (IllegalAccessException exception) {
-            LOGGER.error(String.format("Unsupported type %s", field.getType()));
-            throw new UnsupportedTypeException("An error has occurred");
+            LOGGER.error(String.format("Unsupported type %s", field.getType()), new UnsupportedTypeException(exception.getMessage()));
         }
         return entity;
     }
@@ -151,7 +150,7 @@ public class EntityUtils {
                 entity = EntityUtils.fillData(entity, declaredField, value);
             }
         } catch (NoSuchMethodException | IllegalAccessException | SQLException | InvocationTargetException |
-                InstantiationException exception) {
+                 InstantiationException exception) {
             LOGGER.error("Cannot create entity");
             throw new ORMException(exception.getMessage());
         }
@@ -199,15 +198,15 @@ public class EntityUtils {
         return field.isAnnotationPresent(OneToMany.class);
     }
 
-    public static String getOneToManyMappedByValue(Field field){
-        if(field.isAnnotationPresent(OneToMany.class)){
+    public static String getOneToManyMappedByValue(Field field) {
+        if (field.isAnnotationPresent(OneToMany.class)) {
             String mappedBy = field.getAnnotation(OneToMany.class).mappedBy();
             if (!mappedBy.equals("")) {
                 return mappedBy;
             }
         }
         return field.getName();
-        }
+    }
 
     public static <T> PreparedStatement setterPreparedStatementExecution(PreparedStatement statement, ResultSetMetaData resultSetMetaData, T o, Map<String, Object> associatedEntities) throws SQLException, IllegalAccessException {
         int columnCount = resultSetMetaData.getColumnCount();
@@ -221,11 +220,11 @@ public class EntityUtils {
                     String columnTypeClassName = resultSetMetaData.getColumnClassName(i);
                     EntityUtils.normalizeSqlToJavaTypesWithValues(collectFieldTypeValues, columnTypeClassName, fieldType, field, o);
                 }
-                if(hasManyToOneAnnotation(field)){
-                    if(field.get(o) == null){
+                if (hasManyToOneAnnotation(field)) {
+                    if (field.get(o) == null) {
                         break;
                     }
-                    if(field.get(o).getClass().isAnnotationPresent(Entity.class)){
+                    if (field.get(o).getClass().isAnnotationPresent(Entity.class)) {
                         associatedEntities.put(field.getName(), field.get(o));
                         String fieldTypePretty = "entity";
                         String columnTypeClassName = resultSetMetaData.getColumnClassName(i);
@@ -235,9 +234,9 @@ public class EntityUtils {
                 }
             }
         }
-        for (int i = 1; i+1 <= columnCount; i++) {
-            String columnName = resultSetMetaData.getColumnName(i+1).toLowerCase();
-            if (collectFieldTypeValues.containsKey(columnName)){
+        for (int i = 1; i + 1 <= columnCount; i++) {
+            String columnName = resultSetMetaData.getColumnName(i + 1).toLowerCase();
+            if (collectFieldTypeValues.containsKey(columnName)) {
                 statement.setObject(i, collectFieldTypeValues.get(columnName).get(1));
                 continue;
             }
@@ -248,16 +247,16 @@ public class EntityUtils {
 
     private static Map<String, List<Object>> normalizeSqlToJavaTypesWithValues(Map<String, List<Object>> collectFieldTypeValues, String columnTypeClassName, String fieldRawType, Field field, Object o) throws IllegalAccessException {
 
-        if(columnTypeClassName.equals(fieldRawType) && columnTypeClassName.equals("java.lang.String")){
+        if (columnTypeClassName.equals(fieldRawType) && columnTypeClassName.equals("java.lang.String")) {
             collectFieldTypeValues.put(EntityUtils.getFieldName(field), new ArrayList<>(Arrays.asList("java.lang.String", field.get(o))));
         }
-        if(columnTypeClassName.equals("java.sql.Date") && fieldRawType.equals("java.time.LocalDate")){
+        if (columnTypeClassName.equals("java.sql.Date") && fieldRawType.equals("java.time.LocalDate")) {
             collectFieldTypeValues.put(EntityUtils.getFieldName(field), new ArrayList<>(Arrays.asList("java.sql.Date", field.get(o))));
         }
-        if(columnTypeClassName.equals(fieldRawType) && columnTypeClassName.equals("java.lang.Long")){
+        if (columnTypeClassName.equals(fieldRawType) && columnTypeClassName.equals("java.lang.Long")) {
             collectFieldTypeValues.put(EntityUtils.getFieldName(field), new ArrayList<>(Arrays.asList("java.lang.Long", field.get(o))));
         }
-        if(columnTypeClassName.equals("java.lang.Long") && fieldRawType.equals("entity")){
+        if (columnTypeClassName.equals("java.lang.Long") && fieldRawType.equals("entity")) {
             Object associatedObject = field.get(o);
             Long id = EntityUtils.getId(associatedObject);
             collectFieldTypeValues.put(EntityUtils.getFieldName(field), new ArrayList<>(Arrays.asList("java.lang.Long", id)));
@@ -268,20 +267,46 @@ public class EntityUtils {
     public static <T> void addNewRecordToAssociatedManyToOneCollection(T newRecord, ResultSetMetaData resultSetMetaData, Map<String, Object> associatedEntities) throws SQLException, IllegalAccessException {
         int columnCount = resultSetMetaData.getColumnCount();
         for (int i = 1; i <= columnCount; i++) {
-            if(associatedEntities.containsKey(resultSetMetaData.getColumnName(i).toLowerCase())){
+            if (associatedEntities.containsKey(resultSetMetaData.getColumnName(i).toLowerCase())) {
                 Object associateEntity = associatedEntities.get(resultSetMetaData.getColumnName(i).toLowerCase());
                 Field[] fields = associateEntity.getClass().getDeclaredFields();
-                for (Field field:  fields) {
+                for (Field field : fields) {
                     field.setAccessible(true);
                     if (EntityUtils.hasOneToManyAnnotation(field)) {
-                        if(Objects.equals(field.getType().getName(), "java.util.List") && field.get(associateEntity) != null){
-                            List<T> fieldValue = (List<T>)field.get(associateEntity);
+                        if (Objects.equals(field.getType().getName(), "java.util.List") && field.get(associateEntity) != null) {
+                            List<T> fieldValue = (List<T>) field.get(associateEntity);
                             fieldValue.add(newRecord);
                             field.set(associateEntity, fieldValue);
                         }
                     }
                 }
             }
+        }
+    }
+
+    public static Field getIdColumn(Class<?> aClass) {
+        return Arrays.stream(aClass.getDeclaredFields())
+                .filter(f -> f.isAnnotationPresent(Id.class))
+                .findFirst()
+                .orElseThrow(() -> new UnsupportedOperationException("Entity is missing an Id column"));
+    }
+
+    public static String getSQLColumName(Field idField) {
+        Id idAnnotation = idField.getAnnotation(Id.class);
+        String fieldName = null;
+
+        if (idAnnotation != null) {
+            fieldName = idField.getName();
+        }
+        return fieldName;
+    }
+
+    public static Object getFieldIdValue(Object o, Field idField) throws ORMException {
+        idField.setAccessible(true);
+        try {
+            return idField.get(o);
+        } catch (IllegalAccessException exception) {
+            throw new ORMException(exception.getMessage());
         }
     }
 }
