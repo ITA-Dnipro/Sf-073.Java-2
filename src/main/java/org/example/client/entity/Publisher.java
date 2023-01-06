@@ -14,7 +14,7 @@ public class Publisher {
     @Column()
     private String name;
 
-    @OneToMany(mappedBy = "publisher_id")
+    @OneToMany(mappedBy = "publishers")
     private List<Book> books;
 
     public Publisher() {
@@ -45,12 +45,18 @@ public class Publisher {
         return books;
     }
 
+    public void setBooks(List<Book> books) {
+        this.books = books;
+    }
+
     @Override
     public String toString() {
-        return new StringJoiner(", ", Publisher.class.getSimpleName() + "[", "]")
-                .add("id=" + id)
-                .add("name='" + name + "'")
-                .add("books=" + books)
-                .toString();
+        StringJoiner sj = new StringJoiner(", ", Publisher.class.getSimpleName() + "[", "]")
+                .add("id = " + id)
+                .add("name = '" + name + "'");
+        if (books != null) {
+            books.forEach(b -> sj.add("  --- bookId = " + b.getId() + " bookTitle = " + b.getTitle()));
+        }
+        return sj.toString();
     }
 }

@@ -68,11 +68,18 @@ public class Book {
 
     @Override
     public String toString() {
-        return new StringJoiner(", ", Book.class.getSimpleName() + "[", "]")
-                .add("id=" + id)
-                .add("title='" + title + "'")
-                .add("publishedAt=" + publishedAt)
-                .add("publisher=" + publisher)
-                .toString();
+        StringJoiner sj = new StringJoiner(", ", Book.class.getSimpleName() + "[", "]")
+                .add("id = " + id)
+                .add("title = '" + title + "'")
+                .add("publishedAt = " + publishedAt);
+        if (publisher != null) {
+            sj.add("[publisherId = " + publisher.getId());
+            sj.add("publisherName = " + publisher.getName());
+            if (publisher.getBooks() != null) {
+                sj.add("book ids: ");
+                publisher.getBooks().forEach(b -> sj.add(b.id.toString()));
+            }
+        }
+        return sj.toString();
     }
 }
