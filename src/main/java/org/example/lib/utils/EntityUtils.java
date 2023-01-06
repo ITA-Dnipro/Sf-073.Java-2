@@ -197,6 +197,14 @@ public class EntityUtils {
         return fieldType;
     }
 
+    public static String getTableNameFromGenericTypeOneToMany(Field field) throws ClassNotFoundException {
+        String fieldGenericType = field.getGenericType().getTypeName();
+        String[] strArr =fieldGenericType.split("<");
+        String className = (strArr[1].substring(0, strArr[1].length()-1));
+        Class<?> entityClass = Class.forName(className);
+        return getTableName(entityClass);
+    }
+
     public static boolean hasIdAndColumnAnnotation(Field field) {
         return field.isAnnotationPresent(Column.class) ||
                 field.isAnnotationPresent(Id.class);
@@ -305,23 +313,33 @@ public class EntityUtils {
         return "id";
     }
 
-    public static <T> Map<String, List<Object>> collectEntityFieldTypeValues(T object) throws IllegalAccessException {
+    public static <T> Map<String, List<Object>> collectEntityFieldTypeValues(T object) throws IllegalAccessException, ClassNotFoundException {
         Map<String, List<Object>> entityFieldTypeValues = new HashMap<>();
         Field[] entityFields = object.getClass().getDeclaredFields();
         for (Field field: entityFields){
             field.setAccessible(true);
-            if (hasIdAndColumnAnnotation(field)){
-                entityFieldTypeValues.put(getFieldName(field), new ArrayList<>(Arrays.asList(field.getType().getName(), field.get(object))));
+            String fieldType = field.getType().getSimpleName().toLowerCase();
+            Object fieldValue = field.get(object);
+            if(fieldValue == null){
+                entityFieldTypeValues.put(getFieldName(field), new ArrayList<>(Arrays.asList(fieldType, null)));
+                continue;
             }
-            if(hasManyToOneAnnotation(field) && field.get(object).getClass().isAnnotationPresent(Entity.class)){
-                Class<?> fieldClass = field.get(object).getClass();
-                entityFieldTypeValues.put(getOneToManyMappedByValue(fieldClass), new ArrayList<>(Arrays.asList(getIdType(fieldClass), field.get(object))));
+            if (hasIdAndColumnAnnotation(field)){
+                entityFieldTypeValues.put(getFieldName(field), new ArrayList<>(Arrays.asList(fieldType, fieldValue)));
+            }
+            if(hasManyToOneAnnotation(field)){
+                Class<?> fieldClass = fieldValue.getClass();
+                entityFieldTypeValues.put(getOneToManyMappedByValue(fieldClass), new ArrayList<>(Arrays.asList(getIdType(fieldClass), fieldValue)));
+            }
+            if(hasOneToManyAnnotation(field)){
+                entityFieldTypeValues.put(getTableNameFromGenericTypeOneToMany(field), new ArrayList<>(Arrays.asList(fieldType, fieldValue)));
             }
         }
         return entityFieldTypeValues;
     }
 
-    public static <T> Map<String, List<Object>> collectRecordColumnTypeValues(ResultSet rs, ResultSetMetaData rsMetaData) throws SQLException {
+    public static <T> Map<String, List<Object>> collectRecordColumnTypeValues(ResultSet rs) throws SQLException {
+        ResultSetMetaData rsMetaData = rs.getMetaData();
         Map<String, List<Object>> recordColumnTypeValues = new HashMap<>();
         int columnCount = rsMetaData.getColumnCount();
         for (int i = 1; i <= columnCount ; i++) {
