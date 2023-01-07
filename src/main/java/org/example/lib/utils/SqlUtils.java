@@ -42,6 +42,14 @@ public class SqlUtils {
                 EntityUtils.getId(o);
     }
 
+    public static String findByIdQuery(Long id, Class<?> cls) {
+        return SELECT_ALL_FROM +
+                EntityUtils.getTableName(cls) +
+                " WHERE " +
+                EntityUtils.getTableName(cls) + "." + EntityUtils.getIdFieldName(cls) +
+                " = " + id;
+    }
+
     public static String selectFirstFromTable(Class<?> cls) {
         return SELECT_ALL_FROM +
                 EntityUtils.getTableName(cls) +

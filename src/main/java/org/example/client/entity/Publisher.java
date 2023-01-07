@@ -29,7 +29,7 @@ public class Publisher {
         return id;
     }
 
-    private void setId(Long id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -54,7 +54,7 @@ public class Publisher {
         StringJoiner sj = new StringJoiner(", ", Publisher.class.getSimpleName() + "[", "]")
                 .add("id = " + id)
                 .add("name = '" + name + "'");
-        if (books != null) {
+        if (books != null && !books.isEmpty()) {
             books.forEach(b -> sj.add("  --- bookId = " + b.getId() + " bookTitle = " + b.getTitle()));
         }
         return sj.toString();
