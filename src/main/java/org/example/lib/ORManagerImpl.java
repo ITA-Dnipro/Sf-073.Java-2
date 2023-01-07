@@ -99,7 +99,6 @@ public class ORManagerImpl implements ORManager {
                 e.printStackTrace();
             }
         } else {
-            o = merge(o);
         }
         return o;
     }
