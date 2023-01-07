@@ -91,8 +91,6 @@ public class ORManagerImpl implements ORManager {
                     LOGGER.info("Possible reason: columns with key constraints NON NULL || UNIQUE prevent saving this record");
                     throw new ExistingObjectException("Please provide non existing entity or check for duplicate constraint fields");
                 }
-            } finally {
-                closeConnection(this.connection);
             }
         } else {
             Optional<?> optionalRecord = findById(EntityUtils.getId(o), o.getClass());
@@ -120,8 +118,6 @@ public class ORManagerImpl implements ORManager {
         } catch (SQLException exception) {
             LOGGER.error(String.format("%s with that name already exists in the database. The name of the %s should be UNIQUE"
                     , o.getClass().getSimpleName(), o.getClass().getSimpleName()), new ExistingObjectException(exception.getMessage()));
-        } finally {
-            closeConnection(this.connection);
         }
     }
 
@@ -134,8 +130,6 @@ public class ORManagerImpl implements ORManager {
             resultSet = connection.prepareStatement(sql).executeQuery();
         } catch (SQLException exception) {
             throw new ORMException(exception.getMessage());
-        } finally {
-            closeConnection(this.connection);
         }
         return EntityUtils.createEntity(cls, resultSet);
     }
@@ -245,17 +239,6 @@ public class ORManagerImpl implements ORManager {
             return true;
         } catch (SQLException exception) {
             throw new ORMException(exception.getMessage());
-        }
-    }
-
-    private void closeConnection(Connection connection) {
-
-        if (Objects.nonNull(connection)) {
-            try {
-                connection.close();
-            } catch (SQLException exception) {
-                LOGGER.error("Connection is already closed");
-            }
         }
     }
 }
