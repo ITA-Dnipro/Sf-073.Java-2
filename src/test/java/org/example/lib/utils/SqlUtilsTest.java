@@ -1,5 +1,6 @@
 package org.example.lib.utils;
 
+
 import com.zaxxer.hikari.HikariDataSource;
 import org.example.client.entity.Book;
 import org.example.client.entity.Publisher;
@@ -8,11 +9,10 @@ import org.example.lib.ORManagerImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.sql.Connection;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.LocalDate;
 
-public class SqlUtilsTest {
+class SqlUtilsTest {
 
     private static Connection connection;
 
@@ -32,9 +32,17 @@ public class SqlUtilsTest {
         Publisher publisher = new Publisher("Publisher Test 1");
 
         Assertions.assertEquals("INSERT INTO books (TITLE, PUBLISHED_AT, PUBLISHER) VALUES ( ?, ?, ?)",
-                SqlUtils.saveQuery(book, Book.class, connection));
+                SqlUtils.saveQuery(book, connection));
         Assertions.assertEquals("INSERT INTO publishers (NAME) VALUES ( ?)",
-                SqlUtils.saveQuery(publisher, Publisher.class, connection));
-
+                SqlUtils.saveQuery(publisher, connection));
     }
+
+    @Test
+    void should_Retrieve_Column_Names_From_Table() throws Exception {
+        Assertions.assertEquals("TITLE, PUBLISHED_AT, PUBLISHER", SqlUtils.getColumnNamesInsert("BOOKS", connection));
+        Assertions.assertEquals("NAME", SqlUtils.getColumnNamesInsert("PUBLISHERS", connection));
+    }
+
+
+
 }

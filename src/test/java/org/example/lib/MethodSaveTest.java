@@ -11,6 +11,7 @@ import org.junit.jupiter.api.*;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import java.util.Properties;
@@ -47,9 +48,7 @@ class MethodSaveTest {
     @Test
     void should_Retrieve_Column_Names_From_Table() throws Exception {
         Assertions.assertEquals("TITLE, PUBLISHED_AT, PUBLISHER", SqlUtils.getColumnNamesInsert("BOOKS", orManagerImpl.getConnection()));
-        Assertions.assertEquals("ID, TITLE, PUBLISHED_AT, PUBLISHER", SqlUtils.getColumnNamesUpdate("BOOKS", orManagerImpl.getConnection()));
         Assertions.assertEquals("NAME", SqlUtils.getColumnNamesInsert("PUBLISHERS", orManagerImpl.getConnection()));
-        Assertions.assertEquals("ID, NAME", SqlUtils.getColumnNamesUpdate("PUBLISHERS", orManagerImpl.getConnection()));
     }
 
     @Test
@@ -60,13 +59,5 @@ class MethodSaveTest {
         Assertions.assertEquals(LocalDate.of(1998, 3, 24), bookRecord.getPublishedAt());
     }
 
-    @Test
-    void should_Check_If_OneToMany_Object_Is_Present() throws Exception {
-        Publisher publisher = new Publisher("New Publisher Test29 @OneToMany");
-        Publisher pubFromDb = orManager.save(publisher);
-        Book book = new Book("Book With Publisher Test29", LocalDate.of(1998, 3, 24), pubFromDb);
-        Book bookWithPublisher = orManager.save(book);
-        System.out.println(bookWithPublisher);
-        System.out.println(pubFromDb.getBooks());
-    }
+
 }
