@@ -65,38 +65,40 @@ public class ORManagerImpl implements ORManager {
     }
 
     @Override
-    public <T> T save(T o) throws ExistingObjectException, ORMException {
-        long id = 0L;
-        T newRecord = null;
-        Map<String, Object> associatedEntities = new HashMap<>();
+    public <T> T save(T o) throws ORMException, SQLException {
+        Map<String, Object> associatedManyToOneEntities = new HashMap<>();
+        Map<String, Object> associatedOneToManyEntities = new HashMap<>();
+        Long id = null;
         if (!EntityUtils.hasId(o)) {
-            try (PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, o.getClass(), connection),
+            try (PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, connection),
                     Statement.RETURN_GENERATED_KEYS);
                  PreparedStatement stBefore = connection.prepareStatement(SqlUtils.selectFirstFromTable(o.getClass()))) {
                 ResultSetMetaData resultSetMetaData = stBefore.getMetaData();
-                EntityUtils.setterPreparedStatementExecution(statement, resultSetMetaData, o, associatedEntities);
+                EntityUtils.setterPreparedStatementExecution(statement, resultSetMetaData, o, associatedManyToOneEntities);
                 statement.executeUpdate();
                 ResultSet keys = statement.getGeneratedKeys();
-                while (keys.next()) {
-                    id = keys.getLong("id");
-                }
-                Optional<?> optionalRecord = findById(id, o.getClass());
-                newRecord = optionalRecord.map(value -> (T) value).orElse(o);
-                EntityUtils.addNewRecordToAssociatedManyToOneCollection(newRecord, resultSetMetaData, associatedEntities);
-                String successMessage = "Successfully added" + newRecord + "to the database";
-                LOGGER.info(successMessage);
-            } catch (SQLException | IllegalAccessException ex) {
+                keys.next();
+                id = keys.getLong(EntityUtils.getIdFieldName(o.getClass()));
+                EntityUtils.setFieldId(id, o);
+            } catch (SQLException | IllegalAccessException | ClassNotFoundException ex) {
                 if (ex.getClass().getTypeName().equals("org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException")) {
                     LOGGER.error(String.format("SQL exception: org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException saving %s", o.getClass()));
                     LOGGER.info("Possible reason: columns with key constraints NON NULL || UNIQUE prevent saving this record");
                     throw new ExistingObjectException("Please provide non existing entity or check for duplicate constraint fields");
                 }
             }
+            try(ResultSet rs = connection.prepareStatement(SqlUtils.findByIdQuery(id, o.getClass())).executeQuery()){
+                rs.next();
+                EntityUtils.addNewRecordToAssociatedManyToOneCollection(o, rs, associatedManyToOneEntities);
+                EntityUtils.saveNewRecordFromAssociatedOneToManyCollection(this, o);
+                String successMessage = "Successfully SAVED" + o + "to the database";
+                LOGGER.info(successMessage);
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
         } else {
-            Optional<?> optionalRecord = findById(EntityUtils.getId(o), o.getClass());
-            newRecord = optionalRecord.map(value -> (T) value).orElse(o);
         }
-        return newRecord;
+        return o;
     }
 
     @Override

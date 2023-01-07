@@ -29,7 +29,7 @@ public class Publisher {
         return id;
     }
 
-    private void setId(Long id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -45,12 +45,18 @@ public class Publisher {
         return books;
     }
 
+    public void setBooks(List<Book> books) {
+        this.books = books;
+    }
+
     @Override
     public String toString() {
-        return new StringJoiner(", ", Publisher.class.getSimpleName() + "[", "]")
-                .add("id=" + id)
-                .add("name='" + name + "'")
-                .add("books=" + books)
-                .toString();
+        StringJoiner sj = new StringJoiner(", ", Publisher.class.getSimpleName() + "[", "]")
+                .add("id = " + id)
+                .add("name = '" + name + "'");
+        if (books != null && !books.isEmpty()) {
+            books.forEach(b -> sj.add("  --- bookId = " + b.getId() + " bookTitle = " + b.getTitle()));
+        }
+        return sj.toString();
     }
 }
