@@ -1,5 +1,6 @@
 package org.example.lib.utils;
 
+import org.example.lib.ORManagerImpl;
 import org.example.lib.annotation.*;
 import org.example.lib.exception.*;
 import org.slf4j.*;
@@ -433,6 +434,44 @@ public class EntityUtils {
             if (field.isAnnotationPresent(OneToMany.class)) {
                field.set(o, newList);
             }
+        }
+    }
+    public static Field getIdColumn(Class<?> aClass) {
+        return Arrays.stream(aClass.getDeclaredFields())
+                .filter(f -> f.isAnnotationPresent(Id.class))
+                .findFirst()
+                .orElseThrow(() -> new UnsupportedOperationException("Entity is missing an Id column"));
+    }
+
+    public static String getSQLColumName(Field idField) {
+        Id idAnnotation = idField.getAnnotation(Id.class);
+        String fieldName = null;
+
+        if (idAnnotation != null) {
+            fieldName = idField.getName();
+        }
+        return fieldName;
+    }
+
+    public static Object getFieldIdValue(Object o, Field idField) throws ORMException {
+        idField.setAccessible(true);
+        try {
+            return idField.get(o);
+        } catch (IllegalAccessException exception) {
+            throw new ORMException(exception.getMessage());
+        }
+    }
+
+    public static <T> void entityIdGenerator(T o, ResultSet generatedKey) {
+        Field[] declaredFields = o.getClass().getDeclaredFields();
+        try {
+            declaredFields[0].setAccessible(true);
+            String fieldTypeSimpleName = declaredFields[0].getType().getSimpleName();
+            if (fieldTypeSimpleName.equals("Long")) {
+                declaredFields[0].set(o, generatedKey.getLong(1));
+            }
+        } catch (IllegalAccessException | SQLException exception) {
+            LOGGER.error(exception.getMessage());
         }
     }
 }
