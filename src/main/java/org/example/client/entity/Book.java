@@ -17,7 +17,7 @@ public class Book {
 
     // 2nd stage:
     @ManyToOne(columnName = "publisher_id")
-    Publisher publisher;
+    private Publisher publisher;
 
     public Book() {
     }
@@ -37,6 +37,7 @@ public class Book {
     public Long getId() {
         return id;
     }
+
 
     public String getTitle() {
         return title;
@@ -62,7 +63,7 @@ public class Book {
         this.publisher = publisher;
     }
 
-    private void setId(Long id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -75,9 +76,9 @@ public class Book {
         if (publisher != null) {
             sj.add("[publisherId = " + publisher.getId());
             sj.add("publisherName = " + publisher.getName());
-            if (publisher.getBooks() != null) {
+            if (publisher.getBooks() != null && !publisher.getBooks().isEmpty()) {
                 sj.add("book ids: ");
-                publisher.getBooks().forEach(b -> sj.add(b.id.toString()));
+                publisher.getBooks().forEach(b -> sj.add(String.valueOf(b.id)));
             }
         }
         return sj.toString();
