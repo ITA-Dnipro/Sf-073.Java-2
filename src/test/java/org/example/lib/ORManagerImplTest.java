@@ -46,9 +46,9 @@ public class ORManagerImplTest {
         Table table = new Table(dataSource, "books");
 
         assertThat(table).column(0).hasColumnName("id")
-                         .column(1).hasColumnName("title")
-                         .column(2).hasColumnName("published_at")
-                         .column(3).hasColumnName("publisher_id");
+                .column(1).hasColumnName("title")
+                .column(2).hasColumnName("published_at")
+                .column(3).hasColumnName("publisher_id");
     }
 
     @Test
@@ -57,7 +57,7 @@ public class ORManagerImplTest {
         Table table = new Table(dataSource, "publishers");
 
         assertThat(table).column(0).hasColumnName("id")
-                         .column(1).hasColumnName("name");
+                .column(1).hasColumnName("name");
     }
 
     @Test
@@ -66,8 +66,8 @@ public class ORManagerImplTest {
         Request request = new Request(dataSource, "select * from publishers");
 
         assertThat(request).row(0)
-                           .value().isEqualTo(1)
-                           .value().isEqualTo("Test Publisher");
+                .value().isEqualTo(1)
+                .value().isEqualTo("Test Publisher");
     }
 
     @Test
@@ -76,9 +76,9 @@ public class ORManagerImplTest {
         Request request = new Request(dataSource, "select * from books");
 
         assertThat(request).row(0)
-                           .value().isEqualTo(1)
-                           .value().isEqualTo("Test Book")
-                           .value().isEqualTo(LocalDate.now());
+                .value().isEqualTo(1)
+                .value().isEqualTo("Test Book")
+                .value().isEqualTo(LocalDate.now());
     }
 
     @Test
@@ -89,11 +89,9 @@ public class ORManagerImplTest {
         Publisher publisher = orManager.findById(1, Publisher.class).get();
 
         assertThat(request).column("id")
-                           .value().isEqualTo(1)
-                           .column("name")
-                           .value().isEqualTo("Test Publisher");
-
-        assertThat(request).equals(publisher);
+                .value().isEqualTo(publisher.getId())
+                .column("name")
+                .value().isEqualTo("Test Publisher");
     }
 
     @Test
@@ -103,12 +101,17 @@ public class ORManagerImplTest {
 
         Book book = orManager.findById(1, Book.class).get();
 
-        assertThat(request).equals(book);
+        assertThat(request).column("id")
+                .value().isEqualTo(book.getId())
+                .column("title")
+                .value().isEqualTo("Test Book")
+                .column("published_at")
+                .value().isEqualTo(LocalDate.now());
     }
 
     @Test
     @DisplayName("Find all books count in the table")
-    void test_findAll_when_requestingAllBooks_should_returnNumberOfRowsCorrectly() throws Exception {
+    void test_findAll_when_requestingAllBooks_should_returnNumberOfRowsCorrectly() {
         Request request = new Request(dataSource, "select * from books");
 
         List<Book> expected = orManager.findAll(Book.class);
@@ -118,7 +121,7 @@ public class ORManagerImplTest {
 
     @Test
     @DisplayName("Find all publishers count in the table")
-    void test_findAll_when_requestingAllPublishers_should_returnNumberOfRowsCorrectly() throws Exception {
+    void test_findAll_when_requestingAllPublishers_should_returnNumberOfRowsCorrectly() {
         Request request = new Request(dataSource, "select * from publishers");
 
         List<Publisher> expected = orManager.findAll(Publisher.class);
@@ -128,7 +131,7 @@ public class ORManagerImplTest {
 
     @Test
     @DisplayName("Find all books")
-    void test_findAll_when_requestingAllBooks_should_return_AllBooksCorrectly() throws Exception {
+    void test_findAll_when_requestingAllBooks_should_return_AllBooksCorrectly() {
         Request request = new Request(dataSource, "select * from books");
 
         List<Book> expected = orManager.findAll(Book.class);
@@ -138,7 +141,7 @@ public class ORManagerImplTest {
 
     @Test
     @DisplayName("Find all publishers")
-    void test_findAll_when_requestingAllPublishers_should_return_AllBooksCorrectly() throws Exception {
+    void test_findAll_when_requestingAllPublishers_should_return_AllBooksCorrectly() {
         Request request = new Request(dataSource, "select * from publishers");
 
         List<Publisher> expected = orManager.findAll(Publisher.class);
@@ -153,7 +156,7 @@ public class ORManagerImplTest {
         Request request = new Request(dataSource, "select * from books");
 
         assertThat(request).column("title")
-                           .containsValues("Test Book");
+                .containsValues("Test Book");
     }
 
     @Test
@@ -162,6 +165,6 @@ public class ORManagerImplTest {
         Request request = new Request(dataSource, "select * from publishers");
 
         assertThat(request).column("name")
-                           .containsValues("Test Publisher");
+                .containsValues("Test Publisher");
     }
 }

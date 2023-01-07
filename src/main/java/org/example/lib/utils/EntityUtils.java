@@ -1,6 +1,5 @@
 package org.example.lib.utils;
 
-import org.example.lib.ORManager;
 import org.example.lib.ORManagerImpl;
 import org.example.lib.annotation.*;
 import org.example.lib.exception.*;
@@ -20,7 +19,7 @@ public class EntityUtils {
     private static final String DATE = " DATE NOT NULL";
     private static final String LONG = " BIGINT NOT NULL";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(EntityUtils.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(EntityUtils.class);
 
     private EntityUtils() {
     }
@@ -63,8 +62,8 @@ public class EntityUtils {
                 }
             }
         } catch (IllegalAccessException exception) {
-            LOGGER.debug("Cannot get the values the entity");
-            throw new ORMException("An error has occurred");
+            LOGGER.debug("Cannot get the values from the entity");
+            throw new ORMException("Cannot get the values from the entity");
         }
 
         return String.join(",", result);
@@ -112,8 +111,7 @@ public class EntityUtils {
 
             }
         } catch (IllegalAccessException exception) {
-            LOGGER.error(String.format("Unsupported type %s", field.getType()));
-            throw new UnsupportedTypeException("An error has occurred");
+            LOGGER.error(String.format("Unsupported type %s", field.getType()), new UnsupportedTypeException(exception.getMessage()));
         }
         return entity;
     }
@@ -153,7 +151,7 @@ public class EntityUtils {
                 entity = EntityUtils.fillData(entity, declaredField, value);
             }
         } catch (NoSuchMethodException | IllegalAccessException | SQLException | InvocationTargetException |
-                InstantiationException exception) {
+                 InstantiationException exception) {
             LOGGER.error("Cannot create entity");
             throw new ORMException(exception.getMessage());
         }
@@ -436,6 +434,44 @@ public class EntityUtils {
             if (field.isAnnotationPresent(OneToMany.class)) {
                field.set(o, newList);
             }
+        }
+    }
+    public static Field getIdColumn(Class<?> aClass) {
+        return Arrays.stream(aClass.getDeclaredFields())
+                .filter(f -> f.isAnnotationPresent(Id.class))
+                .findFirst()
+                .orElseThrow(() -> new UnsupportedOperationException("Entity is missing an Id column"));
+    }
+
+    public static String getSQLColumName(Field idField) {
+        Id idAnnotation = idField.getAnnotation(Id.class);
+        String fieldName = null;
+
+        if (idAnnotation != null) {
+            fieldName = idField.getName();
+        }
+        return fieldName;
+    }
+
+    public static Object getFieldIdValue(Object o, Field idField) throws ORMException {
+        idField.setAccessible(true);
+        try {
+            return idField.get(o);
+        } catch (IllegalAccessException exception) {
+            throw new ORMException(exception.getMessage());
+        }
+    }
+
+    public static <T> void entityIdGenerator(T o, ResultSet generatedKey) {
+        Field[] declaredFields = o.getClass().getDeclaredFields();
+        try {
+            declaredFields[0].setAccessible(true);
+            String fieldTypeSimpleName = declaredFields[0].getType().getSimpleName();
+            if (fieldTypeSimpleName.equals("Long")) {
+                declaredFields[0].set(o, generatedKey.getLong(1));
+            }
+        } catch (IllegalAccessException | SQLException exception) {
+            LOGGER.error(exception.getMessage());
         }
     }
 }

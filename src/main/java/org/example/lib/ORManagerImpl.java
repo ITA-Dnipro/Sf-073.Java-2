@@ -1,6 +1,7 @@
 package org.example.lib;
 
 import org.example.client.entity.Book;
+import org.example.client.entity.Publisher;
 import org.example.lib.annotation.*;
 import org.example.lib.exception.*;
 
@@ -14,8 +15,6 @@ import java.lang.reflect.*;
 import java.sql.*;
 import java.util.*;
 import java.util.stream.Stream;
-
-import static java.lang.System.*;
 
 
 public class ORManagerImpl implements ORManager {
@@ -35,7 +34,7 @@ public class ORManagerImpl implements ORManager {
     }
 
     @Override
-    public void register(Class<?>... entityClasses) throws ORMException {
+    public void register(Class<?>... entityClasses) {
         for (Class<?> cls : entityClasses) {
             if (cls.isAnnotationPresent(Entity.class)) {
                 String tableName = EntityUtils.getTableName(cls);
@@ -59,8 +58,7 @@ public class ORManagerImpl implements ORManager {
                 try (var prepStmt = getConnection().prepareStatement(sqlCreateTable)) {
                     prepStmt.executeUpdate();
                 } catch (SQLException exception) {
-                    LOGGER.error("Cannot create table without annotation @Entity or fields without annotation @Id, @Column or @ManyToOne");
-                    throw new ORMException("An error has occurred");
+                    LOGGER.error("Cannot create table without annotation @Entity or fields without annotation @Id, @Column or @ManyToOne", new ORMException(exception.getMessage()));
                 }
             }
         }
@@ -104,18 +102,24 @@ public class ORManagerImpl implements ORManager {
     }
 
     @Override
-    public void persist(Object o) throws ORMException, ExistingObjectException {
+    public void persist(Object o) throws ORMException {
         String tableName = EntityUtils.getTableName(o.getClass());
         String fieldList = EntityUtils.getFieldsWithoutId(o);
         String valueList = EntityUtils.getFieldValues(o);
-        String sql = String.format("INSERT INTO %s (%s) VALUES (%s)", tableName, fieldList, valueList);
 
+        String sql = String.format("INSERT INTO %s (%s) VALUES (%s)", tableName, fieldList, valueList);
         try {
-            this.connection.prepareStatement(sql).execute();
-            LOGGER.info(String.format("Successfully added %s to the database", o.getClass()));
+            PreparedStatement preparedStatement = this.connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            preparedStatement.execute();
+            ResultSet resultSet = preparedStatement.getGeneratedKeys();
+            while (resultSet.next()) {
+                EntityUtils.entityIdGenerator(o, resultSet);
+            }
+            resultSet.close();
+            LOGGER.info(String.format("Successfully added %s to the database", o.getClass().getSimpleName()));
         } catch (SQLException exception) {
-            LOGGER.error(String.format("%s with that name already exists in the database. The name of the %s should be UNIQUE", o.getClass(), o.getClass()));
-            throw new ExistingObjectException("An error has occurred");
+            LOGGER.error(String.format("%s with that name already exists in the database. The name of the %s should be UNIQUE"
+                    , o.getClass().getSimpleName(), o.getClass().getSimpleName()), new ExistingObjectException(exception.getMessage()));
         }
     }
 
@@ -133,80 +137,32 @@ public class ORManagerImpl implements ORManager {
     }
 
     @Override
-    public <T> List<T> findAll(Class<T> cls) throws ORMException {
+    public <T> List<T> findAll(Class<T> cls) {
         List<T> result = new ArrayList<>();
         String sql = FIND_ALL + EntityUtils.getTableName(cls) + ";";
+
         try {
             PreparedStatement preparedStatement = getConnection().prepareStatement(sql);
             ResultSet resultSet = preparedStatement.executeQuery();
-
             while (resultSet.next()) {
-                T obj = mapObject(cls, resultSet);
+                T obj = cls.getConstructor().newInstance();
+                Field[] declaredFields = obj.getClass().getDeclaredFields();
+                for (Field field : declaredFields) {
+                    if (!field.isAnnotationPresent(Id.class) && !field.isAnnotationPresent(Column.class)) {
+                        continue;
+                    }
+                    String name = EntityUtils.getFieldName(field);
+                    String value = resultSet.getString(name);
+                    field.setAccessible(true);
+                    EntityUtils.fillData(obj, field, value);
+                }
                 result.add(obj);
             }
-        } catch (ORMException | SQLException | NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException | NoSuchFieldException | ClassNotFoundException exception) {
-            LOGGER.error("Something went wrong");
-            throw new ORMException(exception.getMessage());
+        } catch (NoSuchMethodException | IllegalAccessException | SQLException | InvocationTargetException |
+                 InstantiationException exception) {
+            LOGGER.error("Something went wrong", new ORMException(exception.getMessage()));
         }
         return result;
-    }
-
-    private <T> T mapObject(Class<T> cls, ResultSet resultSet) throws ORMException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException, SQLException, NoSuchFieldException, ClassNotFoundException {
-        T obj = cls.getConstructor().newInstance();
-        Field[] declaredFields = obj.getClass().getDeclaredFields();
-        for (Field field : declaredFields) {
-            field.setAccessible(true);
-            String fieldName = EntityUtils.getFieldName(field);
-            String fieldValue;
-            if (field.isAnnotationPresent(Id.class) || field.isAnnotationPresent(Column.class)) {
-                fieldValue = resultSet.getString(fieldName);
-                EntityUtils.fillData(obj, field, fieldValue);
-            } else if (field.isAnnotationPresent(ManyToOne.class)) {
-                fieldValue = resultSet.getString(fieldName);
-                if (fieldValue != null) {
-                    Class<?> type = field.getType();
-                    Optional<?> findById = findById(Integer.parseInt(fieldValue), type);
-                    Object publisher = findById.get();
-                    field.set(obj, publisher);
-
-                    // adds the books to publisher's list
-                    Field books = findById.get().getClass().getDeclaredField("books");
-                    books.setAccessible(true);
-                    Method method = Class.forName("java.util.List").getMethod("add", Object.class);
-                    List<T> booksList = new ArrayList<>();
-                    String sql2 = "select * from books where " + fieldName + " = " + fieldValue;
-                    List<Book> list = new ArrayList<>();
-                    try (ResultSet rs = getConnection().prepareStatement(sql2).executeQuery()) {
-                        while (rs.next()) {
-                            int aLong = rs.getInt(1);
-                            Optional<Book> byId1 = findById(aLong, Book.class);
-                            Book book = byId1.get();
-                            list.add(book);
-                        }
-                    }
-                    method.invoke(booksList, obj);
-                    books.set(publisher, list);
-                }
-            } else if (field.isAnnotationPresent(OneToMany.class)) {
-                if (field.getType() == List.class) {
-                    field.setAccessible(true);
-                    Field id = obj.getClass().getDeclaredField("id");
-                    id.setAccessible(true);
-                    Object entityId = id.get(obj);
-                    String query = "select * from " + fieldName + " where publisher_id = " + entityId;
-                    List<Book> list = new ArrayList<>();
-                    ResultSet rs = getConnection().prepareStatement(query).executeQuery();
-                    while (rs.next()) {
-                        int bookId = rs.getInt(1);
-                        Optional<Book> byId = findById(bookId, Book.class);
-                        Book book = byId.get();
-                        list.add(book);
-                    }
-                    field.set(obj, list);
-                }
-            }
-        }
-        return obj;
     }
 
     @Override
@@ -221,29 +177,8 @@ public class ORManagerImpl implements ORManager {
 
     @Override
     public <T> T merge(T o) {
-        Map<String, Object> associatedEntities = new HashMap<>();
-        T updatedRecord = null;
-        if (EntityUtils.hasId(o)) {
-            try(ResultSet rs = connection
-                    .prepareStatement(SqlUtils.findByIdQuery(o),
-                            ResultSet.TYPE_SCROLL_SENSITIVE,
-                            ResultSet.CONCUR_UPDATABLE).executeQuery()){
-                rs.next();
-                EntityUtils.updateResultSetExecution(o, rs, rs.getMetaData());
-                rs.updateRow();
-                Optional<?> optionalRecord = findById(EntityUtils.getId(o), o.getClass());
-                updatedRecord = optionalRecord.map(value -> (T) value).orElse(o);;
-                EntityUtils.addNewRecordToAssociatedManyToOneCollection(updatedRecord, rs, associatedEntities);
-                String successMessage = "Successfully MERGED" + updatedRecord + "to the database";
-                LOGGER.info(successMessage);
-            }catch(SQLException | IllegalAccessException | ORMException ex){
-                LOGGER.error("Error in MERGE method occurred!");
-                ex.printStackTrace();
-            }
-        }
-        return updatedRecord;
+        return null;
     }
-
 
     @Override
     public <T> T refresh(T o) {
@@ -251,7 +186,61 @@ public class ORManagerImpl implements ORManager {
     }
 
     @Override
-    public boolean delete(Object o) {
-        return false;
+    public boolean delete(Object o) throws ORMException {
+        String tableName = EntityUtils.getTableName(o.getClass());
+
+        String deleteQuery = null;
+        Field idField;
+        String idName;
+        Object idValue;
+        ResultSet resultSet;
+
+        if (o.getClass().equals(Book.class)) {
+            String sql2 = String.format("SELECT `id` FROM %s WHERE `title` = '%s';", tableName, ((Book) o).getTitle());
+            try {
+                resultSet = this.connection.prepareStatement(sql2).executeQuery();
+                while (resultSet.next()) {
+                    idField = EntityUtils.getIdColumn(o.getClass());
+                    idName = EntityUtils.getSQLColumName(idField);
+                    Long id = resultSet.getLong("ID");
+                    idField.setAccessible(true);
+                    idField.set(o, id);
+                    idValue = EntityUtils.getFieldIdValue(o, idField);
+                    deleteQuery = String.format("DELETE FROM %s WHERE %s = %s", tableName, idName, idValue);
+                    LOGGER.info(String.format("Deleted %s with title %s", o.getClass().getSimpleName(), ((Book) o).getTitle()));
+                }
+            } catch (Exception exception) {
+                LOGGER.error(String.format("Cannot delete %s with that ID", o.getClass().getSimpleName()),
+                        new ORMException(exception.getMessage()));
+            }
+        } else if (o.getClass().equals(Publisher.class)) {
+            String sql2 = String.format("SELECT `id` FROM %s WHERE `name` = '%s';", tableName, ((Publisher) o).getName());
+            try {
+                resultSet = this.connection.prepareStatement(sql2).executeQuery();
+
+                while (resultSet.next()) {
+                    idField = EntityUtils.getIdColumn(o.getClass());
+                    idName = EntityUtils.getSQLColumName(idField);
+                    Long id = resultSet.getLong("ID");
+                    idField.setAccessible(true);
+                    idField.set(o, id);
+                    idValue = EntityUtils.getFieldIdValue(o, idField);
+                    deleteQuery = String.format("DELETE FROM %s WHERE %s = %s", tableName, idName, idValue);
+                    LOGGER.info(String.format("Deleted %s with title %s", o.getClass().getSimpleName(), ((Publisher) o).getName()));
+                }
+            } catch (Exception exception) {
+                LOGGER.error(String.format("Cannot delete %s with that ID", o.getClass().getSimpleName()),
+                        new ORMException(exception.getMessage()));
+            }
+        }
+
+        PreparedStatement deleteStatement;
+        try {
+            deleteStatement = connection.prepareStatement(deleteQuery);
+            deleteStatement.execute();
+            return true;
+        } catch (SQLException exception) {
+            throw new ORMException(exception.getMessage());
+        }
     }
 }
