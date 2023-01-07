@@ -15,6 +15,8 @@ import java.sql.*;
 import java.util.*;
 import java.util.stream.Stream;
 
+import static java.lang.System.*;
+
 
 public class ORManagerImpl implements ORManager {
     private static final String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS";
@@ -66,27 +68,35 @@ public class ORManagerImpl implements ORManager {
 
     @Override
     public <T> T save(T o) throws ORMException, SQLException {
-        Map<String, Object> associatedEntities = new HashMap<>();
+        Map<String, Object> associatedManyToOneEntities = new HashMap<>();
+        Map<String, Object> associatedOneToManyEntities = new HashMap<>();
+        Long id = null;
         if (!EntityUtils.hasId(o)) {
             try (PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, connection),
                     Statement.RETURN_GENERATED_KEYS);
                  PreparedStatement stBefore = connection.prepareStatement(SqlUtils.selectFirstFromTable(o.getClass()))) {
                 ResultSetMetaData resultSetMetaData = stBefore.getMetaData();
-                EntityUtils.setterPreparedStatementExecution(statement, resultSetMetaData, o, associatedEntities);
+                EntityUtils.setterPreparedStatementExecution(statement, resultSetMetaData, o, associatedManyToOneEntities);
                 statement.executeUpdate();
                 ResultSet keys = statement.getGeneratedKeys();
                 keys.next();
-                Optional<?> optionalRecord = findById(keys.getLong(EntityUtils.getIdFieldName(o.getClass())), o.getClass());
-                o = optionalRecord.map(value -> (T) value).orElse(o);
-                EntityUtils.addNewRecordToAssociatedManyToOneCollection(o, resultSetMetaData, associatedEntities);
-                    String successMessage = "Successfully SAVED" + o + "to the database";
-                    LOGGER.info(successMessage);
-            } catch (SQLException | IllegalAccessException ex) {
+                id = keys.getLong(EntityUtils.getIdFieldName(o.getClass()));
+                EntityUtils.setFieldId(id, o);
+            } catch (SQLException | IllegalAccessException | ClassNotFoundException ex) {
                 if (ex.getClass().getTypeName().equals("org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException")) {
                     LOGGER.error(String.format("SQL exception: org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException saving %s", o.getClass()));
                     LOGGER.info("Possible reason: columns with key constraints NON NULL || UNIQUE prevent saving this record");
                     throw new ExistingObjectException("Please provide non existing entity or check for duplicate constraint fields");
                 }
+            }
+            try(ResultSet rs = connection.prepareStatement(SqlUtils.findByIdQuery(id, o.getClass())).executeQuery()){
+                rs.next();
+                EntityUtils.addNewRecordToAssociatedManyToOneCollection(o, rs, associatedManyToOneEntities);
+                EntityUtils.saveNewRecordFromAssociatedOneToManyCollection(this, o);
+                String successMessage = "Successfully SAVED" + o + "to the database";
+                LOGGER.info(successMessage);
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
             }
         } else {
             o = merge(o);
@@ -224,11 +234,11 @@ public class ORManagerImpl implements ORManager {
                 rs.updateRow();
                 Optional<?> optionalRecord = findById(EntityUtils.getId(o), o.getClass());
                 updatedRecord = optionalRecord.map(value -> (T) value).orElse(o);;
-                EntityUtils.addNewRecordToAssociatedManyToOneCollection(updatedRecord, rs.getMetaData(), associatedEntities);
-                String successMessage = "Successfully updated" + updatedRecord + "to the database";
+                EntityUtils.addNewRecordToAssociatedManyToOneCollection(updatedRecord, rs, associatedEntities);
+                String successMessage = "Successfully MERGED" + updatedRecord + "to the database";
                 LOGGER.info(successMessage);
             }catch(SQLException | IllegalAccessException | ORMException ex){
-                LOGGER.error("Error in merge method occurred!");
+                LOGGER.error("Error in MERGE method occurred!");
                 ex.printStackTrace();
             }
         }
