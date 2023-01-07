@@ -11,13 +11,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 
+import java.lang.reflect.Type;
 import java.sql.*;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
+import static java.lang.System.*;
 
 class EntityUtilsTest {
-
 
     static ORManager orManager;
     static ORManagerImpl orManagerImpl;
@@ -49,32 +50,35 @@ class EntityUtilsTest {
 
     }
     @Test
-    void should_Test_Collection_From_collectEntityFieldTypeValues_Method() throws IllegalAccessException {
+    void should_Test_Collection_From_collectEntityFieldTypeValues_Method() throws IllegalAccessException, ClassNotFoundException {
         Book book = new Book("Test Book3", LocalDate.of(2021, 2, 24), new Publisher("pub1"));
         Publisher publisher = new Publisher("Publisher2");
         Map<String, List<Object>> actualCollection = EntityUtils.collectEntityFieldTypeValues(book);
-        actualCollection.forEach((key, value) -> System.out.println(key + " : " + value));
+        actualCollection.forEach((key, value) -> out.println(key + " : " + value));
     }
 
     @Test
-    void should_Test_Collection_From_collectRecordColumnTypeValues_Method() throws SQLException, ORMException {
-        Book book = new Book("Test Book37", LocalDate.of(2021, 2, 24), new Publisher("pub1"));
-        Publisher publisher = new Publisher("Publisher37");
-        Book bookRecord = orManager.save(book);
-        Publisher publisherRecord = orManager.save(publisher);
-        ResultSet resultSet = connection.prepareStatement(SqlUtils.findByIdQuery(bookRecord)).executeQuery();
-        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+    void should_Test_Collection_From_collectRecordColumnTypeValues_Method() throws SQLException, ORMException, IllegalAccessException, ClassNotFoundException {
+        Publisher publisher = orManager.save(new Publisher("Publisher113"));
+        Book bookWithPublisher = orManager.save(new Book("Book113", LocalDate.now(), publisher));
+
+        ResultSet resultSet = connection.prepareStatement(SqlUtils.findByIdQuery(bookWithPublisher)).executeQuery();
         resultSet.next();
-
-        Map<String, List<Object>> actualCollection = EntityUtils.collectRecordColumnTypeValues(resultSet, resultSetMetaData);
-        actualCollection.forEach((key, value) -> System.out.println(key + " : " + value));
-
-        System.out.println();
-
-        Book mergedBook = orManager.merge(bookRecord);
-        System.out.println(mergedBook);
-
-
+        out.println("BookWithPublisher -> values from DB -> saved From bookWithPublisher object");
+        Map<String, List<Object>> actualRecordCollection = EntityUtils.collectRecordColumnTypeValues(resultSet);
+        actualRecordCollection.forEach((key, value) -> out.println(key + " : " + value));
+        out.println("-------------------------------------");
+        out.println("-------------------------------------");
+        out.println("BookWithPublisher -> values from ENTITY -> saved From bookWithPublisher object");
+        Map<String, List<Object>> actualBookWithPubCollection = EntityUtils.collectEntityFieldTypeValues(bookWithPublisher);
+        actualBookWithPubCollection.forEach((key, value) -> out.println(key + " : " + value));
+        out.println("-------------------------------------");
+        out.println("-------------------------------------");
+        out.println(publisher.getBooks());
+        out.println("-------------------------------------");
+        out.println("-------------------------------------");
     }
+
+
     }
 
