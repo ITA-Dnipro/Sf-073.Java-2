@@ -309,5 +309,18 @@ public class EntityUtils {
             throw new ORMException(exception.getMessage());
         }
     }
+
+    public static <T> void entityIdGenerator(T o, ResultSet generatedKey) {
+        Field[] declaredFields = o.getClass().getDeclaredFields();
+        try {
+            declaredFields[0].setAccessible(true);
+            String fieldTypeSimpleName = declaredFields[0].getType().getSimpleName();
+            if (fieldTypeSimpleName.equals("Long")) {
+                declaredFields[0].set(o, generatedKey.getLong(1));
+            }
+        } catch (IllegalAccessException | SQLException exception) {
+            LOGGER.error(exception.getMessage());
+        }
+    }
 }
 

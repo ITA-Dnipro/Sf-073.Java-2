@@ -34,7 +34,7 @@ public class ORManagerImpl implements ORManager {
     }
 
     @Override
-    public void register(Class<?>... entityClasses) throws ORMException {
+    public void register(Class<?>... entityClasses) {
         for (Class<?> cls : entityClasses) {
             if (cls.isAnnotationPresent(Entity.class)) {
                 String tableName = EntityUtils.getTableName(cls);
@@ -58,8 +58,7 @@ public class ORManagerImpl implements ORManager {
                 try (var prepStmt = getConnection().prepareStatement(sqlCreateTable)) {
                     prepStmt.executeUpdate();
                 } catch (SQLException exception) {
-                    LOGGER.error("Cannot create table without annotation @Entity or fields without annotation @Id, @Column or @ManyToOne");
-                    throw new ORMException("An error has occurred");
+                    LOGGER.error("Cannot create table without annotation @Entity or fields without annotation @Id, @Column or @ManyToOne", new ORMException(exception.getMessage()));
                 }
             }
         }
@@ -70,10 +69,10 @@ public class ORManagerImpl implements ORManager {
         long id = 0L;
         T newRecord = null;
         Map<String, Object> associatedEntities = new HashMap<>();
-        if(!EntityUtils.hasId(o)){
-            try(PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, o.getClass(), connection),
+        if (!EntityUtils.hasId(o)) {
+            try (PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, o.getClass(), connection),
                     Statement.RETURN_GENERATED_KEYS);
-                PreparedStatement stBefore = connection.prepareStatement(SqlUtils.selectFirstFromTable(o.getClass()))) {
+                 PreparedStatement stBefore = connection.prepareStatement(SqlUtils.selectFirstFromTable(o.getClass()))) {
                 ResultSetMetaData resultSetMetaData = stBefore.getMetaData();
                 EntityUtils.setterPreparedStatementExecution(statement, resultSetMetaData, o, associatedEntities);
                 statement.executeUpdate();
@@ -86,14 +85,16 @@ public class ORManagerImpl implements ORManager {
                 EntityUtils.addNewRecordToAssociatedManyToOneCollection(newRecord, resultSetMetaData, associatedEntities);
                 String successMessage = "Successfully added" + newRecord + "to the database";
                 LOGGER.info(successMessage);
-            }catch(SQLException | IllegalAccessException ex){
-                if(ex.getClass().getTypeName().equals("org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException")){
+            } catch (SQLException | IllegalAccessException ex) {
+                if (ex.getClass().getTypeName().equals("org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException")) {
                     LOGGER.error(String.format("SQL exception: org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException saving %s", o.getClass()));
                     LOGGER.info("Possible reason: columns with key constraints NON NULL || UNIQUE prevent saving this record");
-                    throw  new ExistingObjectException("Please provide non existing entity or check for duplicate constraint fields");
+                    throw new ExistingObjectException("Please provide non existing entity or check for duplicate constraint fields");
                 }
+            } finally {
+                closeConnection(this.connection);
             }
-        }else{
+        } else {
             Optional<?> optionalRecord = findById(EntityUtils.getId(o), o.getClass());
             newRecord = optionalRecord.map(value -> (T) value).orElse(o);
         }
@@ -108,12 +109,19 @@ public class ORManagerImpl implements ORManager {
 
         String sql = String.format("INSERT INTO %s (%s) VALUES (%s)", tableName, fieldList, valueList);
         try {
-            PreparedStatement preparedStatement = this.connection.prepareStatement(sql);
+            PreparedStatement preparedStatement = this.connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             preparedStatement.execute();
+            ResultSet resultSet = preparedStatement.getGeneratedKeys();
+            while (resultSet.next()) {
+                EntityUtils.entityIdGenerator(o, resultSet);
+            }
+            resultSet.close();
             LOGGER.info(String.format("Successfully added %s to the database", o.getClass().getSimpleName()));
         } catch (SQLException exception) {
             LOGGER.error(String.format("%s with that name already exists in the database. The name of the %s should be UNIQUE"
                     , o.getClass().getSimpleName(), o.getClass().getSimpleName()), new ExistingObjectException(exception.getMessage()));
+        } finally {
+            closeConnection(this.connection);
         }
     }
 
@@ -126,12 +134,14 @@ public class ORManagerImpl implements ORManager {
             resultSet = connection.prepareStatement(sql).executeQuery();
         } catch (SQLException exception) {
             throw new ORMException(exception.getMessage());
+        } finally {
+            closeConnection(this.connection);
         }
         return EntityUtils.createEntity(cls, resultSet);
     }
 
     @Override
-    public <T> List<T> findAll(Class<T> cls) throws ORMException {
+    public <T> List<T> findAll(Class<T> cls) {
         List<T> result = new ArrayList<>();
         String sql = FIND_ALL + EntityUtils.getTableName(cls) + ";";
 
@@ -154,8 +164,7 @@ public class ORManagerImpl implements ORManager {
             }
         } catch (NoSuchMethodException | IllegalAccessException | SQLException | InvocationTargetException |
                  InstantiationException exception) {
-            LOGGER.error("Something went wrong");
-            throw new ORMException(exception.getMessage());
+            LOGGER.error("Something went wrong", new ORMException(exception.getMessage()));
         }
         return result;
     }
@@ -236,6 +245,17 @@ public class ORManagerImpl implements ORManager {
             return true;
         } catch (SQLException exception) {
             throw new ORMException(exception.getMessage());
+        }
+    }
+
+    private void closeConnection(Connection connection) {
+
+        if (Objects.nonNull(connection)) {
+            try {
+                connection.close();
+            } catch (SQLException exception) {
+                LOGGER.error("Connection is already closed");
+            }
         }
     }
 }
