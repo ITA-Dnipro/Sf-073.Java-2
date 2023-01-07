@@ -421,7 +421,6 @@ public class EntityUtils {
 
     public static <T> void saveNewRecordFromAssociatedOneToManyCollection(ORManagerImpl orManager, T o) throws IllegalAccessException, SQLException, ORMException {
         List<?> list = getOneToManyCollection(o);
-        System.out.println(list);
         List newList = new ArrayList<>();
         for (int i = 0; i < list.size(); i++) {
             newList.add(orManager.save(list.get(i)));
