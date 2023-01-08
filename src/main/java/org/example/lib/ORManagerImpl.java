@@ -189,62 +189,21 @@ public class ORManagerImpl implements ORManager {
     @Override
     public boolean delete(Object o) throws ORMException {
         String tableName = EntityUtils.getTableName(o.getClass());
+        Field idField = EntityUtils.getIdColumn(o.getClass());
+        String idName = EntityUtils.getSQLColumName(idField);
+        Object idValue = EntityUtils.getFieldIdValue(o, idField);
+        String deleteQuery = String.format("DELETE FROM %s WHERE %s = %s", tableName, idName, idValue);
 
-        String deleteQuery = null;
-        Field idField;
-        String idName;
-        Object idValue;
-        ResultSet resultSet;
-
-        if (o.getClass().equals(Book.class)) {
-            String sql2 = String.format("SELECT `id` FROM %s WHERE `title` = '%s';", tableName, ((Book) o).getTitle());
-            try {
-                resultSet = this.connection.prepareStatement(sql2).executeQuery();
-                while (resultSet.next()) {
-                    idField = EntityUtils.getIdColumn(o.getClass());
-                    idName = EntityUtils.getSQLColumName(idField);
-                    Long id = resultSet.getLong("ID");
-                    idField.setAccessible(true);
-                    idField.set(o, id);
-                    idValue = EntityUtils.getFieldIdValue(o, idField);
-                    deleteQuery = String.format("DELETE FROM %s WHERE %s = %s", tableName, idName, idValue);
-                    LOGGER.info(String.format("Deleted %s with title %s", o.getClass().getSimpleName(),
-                                              ((Book) o).getTitle()));
-                }
-            } catch (Exception exception) {
-                LOGGER.error(String.format("Cannot delete %s with that ID", o.getClass().getSimpleName()),
-                             new ORMException(exception.getMessage()));
-            }
-        } else if (o.getClass().equals(Publisher.class)) {
-            String sql2 = String.format("SELECT `id` FROM %s WHERE `name` = '%s';", tableName,
-                                        ((Publisher) o).getName());
-            try {
-                resultSet = this.connection.prepareStatement(sql2).executeQuery();
-
-                while (resultSet.next()) {
-                    idField = EntityUtils.getIdColumn(o.getClass());
-                    idName = EntityUtils.getSQLColumName(idField);
-                    Long id = resultSet.getLong("ID");
-                    idField.setAccessible(true);
-                    idField.set(o, id);
-                    idValue = EntityUtils.getFieldIdValue(o, idField);
-                    deleteQuery = String.format("DELETE FROM %s WHERE %s = %s", tableName, idName, idValue);
-                    LOGGER.info(String.format("Deleted %s with title %s", o.getClass().getSimpleName(),
-                                              ((Publisher) o).getName()));
-                }
-            } catch (Exception exception) {
-                LOGGER.error(String.format("Cannot delete %s with that ID", o.getClass().getSimpleName()),
-                             new ORMException(exception.getMessage()));
-            }
-        }
-
-        PreparedStatement deleteStatement;
         try {
-            deleteStatement = connection.prepareStatement(deleteQuery);
+            PreparedStatement deleteStatement = connection.prepareStatement(deleteQuery);
             deleteStatement.execute();
-            return true;
+            if (idValue == null) {
+                throw new SQLException();
+            }
+            LOGGER.info(String.format("Successfully deleted %s with Id %s", o.getClass().getSimpleName(), idValue));
         } catch (SQLException exception) {
-            throw new ORMException(exception.getMessage());
+            LOGGER.error("Cannot delete element with this ID");
         }
+        return false;
     }
 }
