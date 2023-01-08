@@ -16,10 +16,6 @@ import java.util.stream.Stream;
 
 
 public class ORManagerImpl implements ORManager {
-    private static final String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS";
-    private static final String FIND_ALL = "SELECT * FROM ";
-    private static final String FOREIGN_KEY = " FOREIGN KEY (%s) REFERENCES %s(%s)";
-
     private final Connection connection;
     private static final Logger LOGGER = LoggerFactory.getLogger(ORManagerImpl.class);
 
@@ -37,21 +33,9 @@ public class ORManagerImpl implements ORManager {
             if (cls.isAnnotationPresent(Entity.class)) {
                 String tableName = EntityUtils.getTableName(cls);
                 Field[] declaredFields = cls.getDeclaredFields();
-                ArrayList<String> sql = new ArrayList<>();
-                for (Field field : declaredFields) {
-                    Class<?> fieldType = field.getType();
-                    if (field.isAnnotationPresent(Id.class)) {
-                        EntityUtils.setColumnType(sql, fieldType, EntityUtils.getFieldName(field));
-                    } else if (field.isAnnotationPresent(Column.class)) {
-                        EntityUtils.setColumnType(sql, fieldType, EntityUtils.getFieldName(field));
-                    } else if (field.isAnnotationPresent(ManyToOne.class)) {
-                        String fieldName = EntityUtils.getFieldName(field);
-                        sql.add(fieldName + " BIGINT");
-                        sql.add(String.format(FOREIGN_KEY, fieldName, field.getName() + "s", "id"));
-                    }
-                }
-                String sqlCreateTable = String.format("%s %s(%s);", CREATE_TABLE, tableName,
-                                                      String.join(", ", sql));
+                ArrayList<String> sqlArray = new ArrayList<>();
+                EntityUtils.buildingSqlCreateTable(declaredFields, sqlArray);
+                String sqlCreateTable = SqlUtils.createSqlTable(tableName, sqlArray);
                 try (var prepStmt = getConnection().prepareStatement(sqlCreateTable)) {
                     prepStmt.executeUpdate();
                 } catch (SQLException exception) {
@@ -148,7 +132,7 @@ public class ORManagerImpl implements ORManager {
     @Override
     public <T> List<T> findAll(Class<T> cls) throws ORMException {
         List<T> result = new ArrayList<>();
-        String sql = FIND_ALL + EntityUtils.getTableName(cls) + ";";
+        String sql = SqlUtils.findAll() + EntityUtils.getTableName(cls) + ";";
         try (ResultSet resultSet = getConnection().prepareStatement(sql).executeQuery()) {
             while (resultSet.next()) {
                 T obj = EntityUtils.mapObject(cls, resultSet, connection);
