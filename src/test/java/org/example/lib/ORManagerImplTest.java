@@ -12,6 +12,7 @@ import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.db.api.Assertions.assertThat;
 
@@ -166,5 +167,29 @@ public class ORManagerImplTest {
 
         assertThat(request).column("name")
                 .containsValues("Test Publisher");
+    }
+
+    @Test
+    @DisplayName("Delete Book with id 1")
+    void test_delete_bookWith_id1() throws ORMException {
+        Book book = orManager.findById(1, Book.class).get();
+        orManager.delete(book);
+        Request request = new Request(dataSource, "select * from books where id = 1");
+
+        assertThat(request).isEmpty();
+
+
+    }
+
+    @Test
+    @DisplayName("Delete Publisher with id 1")
+    void test_delete_publisherWith_id1() throws ORMException {
+        Publisher publisher = orManager.findById(1, Publisher.class).get();
+        orManager.delete(publisher);
+        Request request = new Request(dataSource, "select * from publishers where id = 1");
+
+        assertThat(request).isEmpty();
+
+
     }
 }
