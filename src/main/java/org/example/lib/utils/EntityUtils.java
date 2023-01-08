@@ -86,17 +86,17 @@ public class EntityUtils {
 
     public static String getFieldsWithoutId(Object o) {
         return Arrays.stream(o.getClass()
-                        .getDeclaredFields())
-                .filter(f -> f.getDeclaredAnnotation(Column.class) != null)
-                .map(f -> {
-                    String name = f.getAnnotation(Column.class).name();
-                    if (!name.equals("")) {
-                        return name;
-                    } else {
-                        return f.getName();
-                    }
-                })
-                .collect(Collectors.joining(","));
+                              .getDeclaredFields())
+                     .filter(f -> f.getDeclaredAnnotation(Column.class) != null)
+                     .map(f -> {
+                         String name = f.getAnnotation(Column.class).name();
+                         if (!name.equals("")) {
+                             return name;
+                         } else {
+                             return f.getName();
+                         }
+                     })
+                     .collect(Collectors.joining(","));
     }
 
     public static <T> boolean hasId(T o) {
@@ -245,7 +245,8 @@ public class EntityUtils {
                 if (hasIdAndColumnAnnotation(field)) {
                     String fieldType = field.getType().getName();
                     String columnTypeClassName = resultSetMetaData.getColumnClassName(i);
-                    EntityUtils.normalizeSqlToJavaTypesWithValues(collectFieldTypeValues, columnTypeClassName, fieldType, field, o);
+                    EntityUtils.normalizeSqlToJavaTypesWithValues(collectFieldTypeValues, columnTypeClassName,
+                                                                  fieldType, field, o);
                 }
                 if (hasManyToOneAnnotation(field)) {
                     if (field.get(o) == null) {
@@ -255,7 +256,8 @@ public class EntityUtils {
                         associatedManyToOneEntities.put(getManyToOneColumnNameValue(o.getClass()), field.get(o));
                         String fieldTypePretty = "entity";
                         String columnTypeClassName = resultSetMetaData.getColumnClassName(i);
-                        EntityUtils.normalizeSqlToJavaTypesWithValues(collectFieldTypeValues, columnTypeClassName, fieldTypePretty, field, o);
+                        EntityUtils.normalizeSqlToJavaTypesWithValues(collectFieldTypeValues, columnTypeClassName,
+                                                                      fieldTypePretty, field, o);
                     }
                 }
             }
@@ -276,18 +278,22 @@ public class EntityUtils {
                     field, Object o) throws IllegalAccessException {
 
         if (columnTypeClassName.equals(fieldRawType) && columnTypeClassName.equals("java.lang.String")) {
-            collectFieldTypeValues.put(EntityUtils.getFieldName(field), new ArrayList<>(Arrays.asList("java.lang.String", field.get(o))));
+            collectFieldTypeValues.put(EntityUtils.getFieldName(field),
+                                       new ArrayList<>(Arrays.asList("java.lang.String", field.get(o))));
         }
         if (columnTypeClassName.equals("java.sql.Date") && fieldRawType.equals("java.time.LocalDate")) {
-            collectFieldTypeValues.put(EntityUtils.getFieldName(field), new ArrayList<>(Arrays.asList("java.sql.Date", field.get(o))));
+            collectFieldTypeValues.put(EntityUtils.getFieldName(field),
+                                       new ArrayList<>(Arrays.asList("java.sql.Date", field.get(o))));
         }
         if (columnTypeClassName.equals(fieldRawType) && columnTypeClassName.equals("java.lang.Long")) {
-            collectFieldTypeValues.put(EntityUtils.getFieldName(field), new ArrayList<>(Arrays.asList("java.lang.Long", field.get(o))));
+            collectFieldTypeValues.put(EntityUtils.getFieldName(field),
+                                       new ArrayList<>(Arrays.asList("java.lang.Long", field.get(o))));
         }
         if (columnTypeClassName.equals("java.lang.Long") && fieldRawType.equals("entity")) {
             Object associatedObject = field.get(o);
             Long id = EntityUtils.getId(associatedObject);
-            collectFieldTypeValues.put(EntityUtils.getFieldName(field), new ArrayList<>(Arrays.asList("java.lang.Long", id)));
+            collectFieldTypeValues.put(EntityUtils.getFieldName(field),
+                                       new ArrayList<>(Arrays.asList("java.lang.Long", id)));
         }
         return collectFieldTypeValues;
     }
@@ -303,7 +309,8 @@ public class EntityUtils {
                 for (Field field : fields) {
                     field.setAccessible(true);
                     if (EntityUtils.hasOneToManyAnnotation(field)) {
-                        if (Objects.equals(field.getType().getName(), "java.util.List") && field.get(associateEntity) != null) {
+                        if (Objects.equals(field.getType().getName(), "java.util.List") && field.get(
+                                associateEntity) != null) {
                             List<T> fieldValue = (List<T>) field.get(associateEntity);
                             List<T> newListValue = new ArrayList<>(fieldValue);
                             newListValue.add(newRecord);
@@ -336,10 +343,12 @@ public class EntityUtils {
             }
             if (hasManyToOneAnnotation(field)) {
                 Class<?> fieldClass = fieldValue.getClass();
-                entityFieldTypeValues.put(getOneToManyMappedByValue(fieldClass), new ArrayList<>(Arrays.asList(getIdType(fieldClass), fieldValue)));
+                entityFieldTypeValues.put(getOneToManyMappedByValue(fieldClass),
+                                          new ArrayList<>(Arrays.asList(getIdType(fieldClass), fieldValue)));
             }
             if (hasOneToManyAnnotation(field)) {
-                entityFieldTypeValues.put(getTableNameFromGenericTypeOneToMany(field), new ArrayList<>(Arrays.asList(fieldType, fieldValue)));
+                entityFieldTypeValues.put(getTableNameFromGenericTypeOneToMany(field),
+                                          new ArrayList<>(Arrays.asList(fieldType, fieldValue)));
             }
         }
         return entityFieldTypeValues;
@@ -351,7 +360,8 @@ public class EntityUtils {
         Map<String, List<Object>> recordColumnTypeValues = new HashMap<>();
         int columnCount = rsMetaData.getColumnCount();
         for (int i = 1; i <= columnCount; i++) {
-            recordColumnTypeValues.put(rsMetaData.getColumnName(i).toLowerCase(), new ArrayList<>(Arrays.asList(rsMetaData.getColumnClassName(i), rs.getObject(i))));
+            recordColumnTypeValues.put(rsMetaData.getColumnName(i).toLowerCase(), new ArrayList<>(
+                    Arrays.asList(rsMetaData.getColumnClassName(i), rs.getObject(i))));
         }
         return recordColumnTypeValues;
     }
@@ -383,9 +393,9 @@ public class EntityUtils {
 
     public static Field getIdColumn(Class<?> aClass) {
         return Arrays.stream(aClass.getDeclaredFields())
-                .filter(f -> f.isAnnotationPresent(Id.class))
-                .findFirst()
-                .orElseThrow(() -> new UnsupportedOperationException("Entity is missing an Id column"));
+                     .filter(f -> f.isAnnotationPresent(Id.class))
+                     .findFirst()
+                     .orElseThrow(() -> new UnsupportedOperationException("Entity is missing an Id column"));
     }
 
     public static String getSQLColumName(Field idField) {
@@ -420,7 +430,79 @@ public class EntityUtils {
         }
     }
 
-    public static  <T> T mapObject(Class<T> cls, ResultSet resultSet, Connection connection) {
+    public static <T> Optional<T> createEntity(Class<T> cls, ResultSet resultSet) throws ORMException {
+        try {
+            if (!resultSet.next()) {
+                LOGGER.info(String.format("%s with that ID doesnt exist", cls.getSimpleName()));
+                return Optional.empty();
+            }
+        } catch (SQLException exception) {
+            throw new ORMException(exception.getMessage());
+        }
+
+        String fieldName = null;
+        T entity;
+        try {
+            entity = cls.getDeclaredConstructor().newInstance();
+
+            Field[] declaredFields = cls.getDeclaredFields();
+            for (Field declaredField : declaredFields) {
+                if (!declaredField.isAnnotationPresent(Column.class) &&
+                        !declaredField.isAnnotationPresent(Id.class) &&
+                        !declaredField.isAnnotationPresent(ManyToOne.class)) {
+                    continue;
+                }
+
+                if (declaredField.isAnnotationPresent(Column.class)) {
+                    Column annotation = declaredField.getAnnotation(Column.class);
+                    if (!annotation.name().equals("")) {
+                        fieldName = annotation.name();
+                    } else {
+                        fieldName = declaredField.getName();
+                    }
+                } else if (declaredField.isAnnotationPresent(Id.class)) {
+                    fieldName = declaredField.getName();
+                } else if (declaredField.isAnnotationPresent(ManyToOne.class)) {
+                    ManyToOne annotation = declaredField.getAnnotation(ManyToOne.class);
+                    if (!annotation.columnName().equals("")) {
+                        fieldName = annotation.columnName();
+                    } else {
+                        fieldName = declaredField.getName();
+                    }
+                }
+
+
+                String value = resultSet.getString(fieldName);
+                entity = fillData(entity, declaredField, value);
+            }
+        } catch (NoSuchMethodException | IllegalAccessException | SQLException | InvocationTargetException |
+                InstantiationException exception) {
+            LOGGER.error("Cannot create entity");
+            throw new ORMException(exception.getMessage());
+        }
+        return Optional.of(entity);
+    }
+
+    public static <T> T fillData(T entity, Field field, String value) {
+        field.setAccessible(true);
+        try {
+            if (field.getType() == long.class || field.getType() == Long.class) {
+                field.set(entity, Long.parseLong(value));
+            } else if (field.getType() == int.class || field.getType() == Integer.class) {
+                field.set(entity, Integer.parseInt(value));
+            } else if (field.getType() == LocalDate.class) {
+                field.set(entity, LocalDate.parse(value));
+            } else if (field.getType() == String.class) {
+                field.set(entity, value);
+            }
+        } catch (IllegalAccessException exception) {
+            LOGGER.error(String.format("Unsupported type %s", field.getType()),
+                         new UnsupportedTypeException(exception.getMessage()));
+        }
+        return entity;
+    }
+
+    public static <T> T mapObject(Class<T> cls, ResultSet resultSet, Connection connection) {
         T entity = null;
         try {
             entity = cls.getConstructor().newInstance();
@@ -431,7 +513,7 @@ public class EntityUtils {
                 String fieldValue;
                 if (field.isAnnotationPresent(Id.class) || field.isAnnotationPresent(Column.class)) {
                     fieldValue = resultSet.getString(fieldName);
-                    EntityUtils.fillData(entity, field, fieldValue);
+                   fillData(entity, field, fieldValue);
                 } else if (field.isAnnotationPresent(ManyToOne.class)) {
                     fieldValue = resultSet.getString(fieldName);
                     if (fieldValue != null) {
@@ -445,10 +527,10 @@ public class EntityUtils {
                         for (Field publisherField : publisher.getClass().getDeclaredFields()) {
                             ResultSet rs = connection.prepareStatement(findPublisherQuery).executeQuery();
                             while (rs.next()) {
-                                String f = EntityUtils.getFieldName(publisherField);
+                                String f = getFieldName(publisherField);
                                 if (!publisherField.isAnnotationPresent(OneToMany.class)) {
                                     String v = rs.getString(f);
-                                    EntityUtils.fillData(publisher, publisherField, v);
+                                   fillData(publisher, publisherField, v);
                                 } else {
                                     booksField = publisherField.getName();
                                     booksFieldType = publisherField.getType();
@@ -489,7 +571,7 @@ public class EntityUtils {
         return entity;
     }
 
-    public static  <T> void addBooksToPublishersList(T entity, String fieldName, String fieldValue, Object publisher, String booksField, Connection connection) {
+    public static <T> void addBooksToPublishersList(T entity, String fieldName, String fieldValue, Object publisher, String booksField, Connection connection) {
         try {
             Field books = publisher.getClass().getDeclaredField(booksField);
             books.setAccessible(true);
@@ -499,9 +581,9 @@ public class EntityUtils {
             try (ResultSet rs = connection.prepareStatement(getBook).executeQuery()) {
                 while (rs.next()) {
                     for (Field bookField : bookToAdd.getClass().getDeclaredFields()) {
-                        String name = EntityUtils.getFieldName(bookField);
+                        String name = getFieldName(bookField);
                         String val = rs.getString(name);
-                        EntityUtils.fillData(bookToAdd, bookField, val);
+                        fillData(bookToAdd, bookField, val);
                     }
                     booksList.add(bookToAdd);
                     bookToAdd = entity.getClass().getConstructor().newInstance();
@@ -513,14 +595,14 @@ public class EntityUtils {
         }
     }
 
-    public static  void mapBook(Object book, String findBookQuery, Connection connection) {
+    public static void mapBook(Object book, String findBookQuery, Connection connection) {
         try {
             for (Field bookField : book.getClass().getDeclaredFields()) {
                 ResultSet rs2 = connection.prepareStatement(findBookQuery).executeQuery();
                 while (rs2.next()) {
-                    String f = EntityUtils.getFieldName(bookField);
+                    String f = getFieldName(bookField);
                     String v = rs2.getString(f);
-                    EntityUtils.fillData(book, bookField, v);
+                    fillData(book, bookField, v);
                 }
             }
         } catch (SQLException exception) {
@@ -528,7 +610,7 @@ public class EntityUtils {
         }
     }
 
-    public static  Object getParameterTypeOfTheList(Field booksField) {
+    public static Object getParameterTypeOfTheList(Field booksField) {
         Object book = null;
         try {
             Class actualTypeArgument = null;
