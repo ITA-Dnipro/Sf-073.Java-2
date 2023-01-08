@@ -13,7 +13,6 @@ public class Publisher {
     private Long id;
     @Column()
     private String name;
-
     @OneToMany(mappedBy = "publishers")
     private List<Book> books;
 
