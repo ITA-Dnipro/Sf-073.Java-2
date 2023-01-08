@@ -1,7 +1,5 @@
 package org.example.lib;
 
-import org.example.client.entity.Book;
-import org.example.client.entity.Publisher;
 import org.example.lib.annotation.*;
 import org.example.lib.exception.*;
 
@@ -13,7 +11,6 @@ import javax.sql.DataSource;
 import java.io.Serializable;
 import java.lang.reflect.*;
 import java.sql.*;
-import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -148,8 +145,6 @@ public class ORManagerImpl implements ORManager {
         return EntityUtils.createEntity(cls, resultSet);
     }
 
-
-
     @Override
     public <T> List<T> findAll(Class<T> cls) throws ORMException {
         List<T> result = new ArrayList<>();
@@ -185,17 +180,16 @@ public class ORManagerImpl implements ORManager {
     public <T> T refresh(T o) throws ORMException {
         Object refreshed = null;
         try {
-            Field idField = o.getClass().getDeclaredField("id");
+            Field idField = EntityUtils.getIdColumn(o.getClass());
             idField.setAccessible(true);
-            Object objectId = idField.get(o);
-            String sql = "select * from " + o.getClass().getSimpleName() + "s where id = " + objectId;
-            ResultSet resultSet = getConnection().prepareStatement(sql).executeQuery();
-            while (resultSet.next()) {
-                int id = resultSet.getInt(1);
-                Optional<?> obj = findById(id, o.getClass());
-                refreshed = obj.get();
+            Object objectId = EntityUtils.getFieldIdValue(o, idField);
+            String sql = SqlUtils.findByIdQuery(Long.parseLong(objectId.toString()), o.getClass());
+            try (ResultSet resultSet = getConnection().prepareStatement(sql).executeQuery()) {
+                while (resultSet.next()) {
+                    refreshed = EntityUtils.mapObject(o.getClass(), resultSet, connection);
+                }
             }
-        } catch (SQLException | ORMException | NoSuchFieldException | IllegalAccessException exception) {
+        } catch (SQLException | ORMException exception) {
             throw new ORMException(exception.getMessage());
         }
 
