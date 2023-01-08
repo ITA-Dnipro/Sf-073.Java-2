@@ -42,7 +42,7 @@ public interface ORManager {
     <T> Optional<T> findById(Serializable id, Class<T> cls) throws ORMException;
 
     // READ ALL
-    <T> List<T> findAll(Class<T> cls);
+    <T> List<T> findAll(Class<T> cls) throws ORMException;
 
     // READ ALL LAZY
     <T> Iterable<T> findAllAsIterable(Class<T> cls) throws Exception; // (MEDIUM)
