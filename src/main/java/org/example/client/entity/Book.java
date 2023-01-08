@@ -14,8 +14,6 @@ public class Book {
     private String title;
     @Column(name = "published_at")
     private LocalDate publishedAt;
-
-    // 2nd stage:
     @ManyToOne(columnName = "publisher_id")
     private Publisher publisher;
 
@@ -74,7 +72,7 @@ public class Book {
         if (publisher != null) {
             sj.add("[publisherId = " + publisher.getId());
             sj.add("publisherName = " + publisher.getName());
-            if (publisher.getBooks().size() > 0) {
+            if (publisher.getBooks() != null) {
                 sj.add("book ids: ");
                 publisher.getBooks().forEach(b -> {
                     if (b.getId() != null) {
