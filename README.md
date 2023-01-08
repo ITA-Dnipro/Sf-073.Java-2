@@ -2,6 +2,7 @@
 Mini ORM project for demonstration working with H2 database and @OneToMany  / @ManyToOne relationships.
 
 Functionality:
+
 •	void register(Class<?>... entityClasses);
 
 •	<T> T save(T o);
