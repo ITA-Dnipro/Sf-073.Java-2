@@ -28,9 +28,7 @@ public class Book {
     }
 
     public Book(String title, LocalDate publishedAt, Publisher publisher) {
-        this();
-        this.title = title;
-        this.publishedAt = publishedAt;
+        this(title, publishedAt);
         this.publisher = publisher;
     }
 
@@ -76,9 +74,13 @@ public class Book {
         if (publisher != null) {
             sj.add("[publisherId = " + publisher.getId());
             sj.add("publisherName = " + publisher.getName());
-            if (publisher.getBooks() != null && !publisher.getBooks().isEmpty()) {
+            if (publisher.getBooks().size() > 0) {
                 sj.add("book ids: ");
-                publisher.getBooks().forEach(b -> sj.add(String.valueOf(b.id)));
+                publisher.getBooks().forEach(b -> {
+                    if (b.getId() != null) {
+                        sj.add(b.id.toString());
+                    }
+                });
             }
         }
         return sj.toString();

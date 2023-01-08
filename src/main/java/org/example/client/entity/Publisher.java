@@ -54,8 +54,9 @@ public class Publisher {
         StringJoiner sj = new StringJoiner(", ", Publisher.class.getSimpleName() + "[", "]")
                 .add("id = " + id)
                 .add("name = '" + name + "'");
-        if (books != null && !books.isEmpty()) {
-            books.forEach(b -> sj.add("  --- bookId = " + b.getId() + " bookTitle = " + b.getTitle()));
+        if (books!= null && books.size() > 0 && getId() != null) {
+            sj.add("book ids: ");
+            books.forEach(b -> sj.add(b.getId().toString()));
         }
         return sj.toString();
     }

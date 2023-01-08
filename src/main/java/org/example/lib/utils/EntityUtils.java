@@ -356,10 +356,7 @@ public class EntityUtils {
         return recordColumnTypeValues;
     }
 
-    public static <T> ResultSet updateResultSetExecution(T o, ResultSet rs, ResultSetMetaData rsMetaData) throws
-            IllegalAccessException {
-
-
+    public static <T> ResultSet updateResultSetExecution(T o, ResultSet rs, ResultSetMetaData rsMetaData) throws IllegalAccessException {
         return rs;
     }
 
@@ -422,5 +419,130 @@ public class EntityUtils {
             LOGGER.error(exception.getMessage());
         }
     }
+
+    public static  <T> T mapObject(Class<T> cls, ResultSet resultSet, Connection connection) {
+        T entity = null;
+        try {
+            entity = cls.getConstructor().newInstance();
+            Field[] declaredFields = entity.getClass().getDeclaredFields();
+            for (Field field : declaredFields) {
+                field.setAccessible(true);
+                String fieldName = EntityUtils.getFieldName(field);
+                String fieldValue;
+                if (field.isAnnotationPresent(Id.class) || field.isAnnotationPresent(Column.class)) {
+                    fieldValue = resultSet.getString(fieldName);
+                    EntityUtils.fillData(entity, field, fieldValue);
+                } else if (field.isAnnotationPresent(ManyToOne.class)) {
+                    fieldValue = resultSet.getString(fieldName);
+                    if (fieldValue != null) {
+                        Class<?> fieldType = field.getType();
+                        Object o = fieldType.getConstructor().newInstance();
+                        String publisherTableName = o.getClass().getAnnotation(Table.class).name();
+                        String findPublisherQuery = "select * from " + publisherTableName + " where id = " + fieldValue;
+                        Object publisher = fieldType.getConstructor().newInstance();
+                        String booksField = "";
+                        Class<?> booksFieldType = null;
+                        for (Field publisherField : publisher.getClass().getDeclaredFields()) {
+                            ResultSet rs = connection.prepareStatement(findPublisherQuery).executeQuery();
+                            while (rs.next()) {
+                                String f = EntityUtils.getFieldName(publisherField);
+                                if (!publisherField.isAnnotationPresent(OneToMany.class)) {
+                                    String v = rs.getString(f);
+                                    EntityUtils.fillData(publisher, publisherField, v);
+                                } else {
+                                    booksField = publisherField.getName();
+                                    booksFieldType = publisherField.getType();
+                                }
+                            }
+                        }
+                        field.set(entity, publisher);
+                        if (booksFieldType == List.class) {
+                            addBooksToPublishersList(entity, fieldName, fieldValue, publisher, booksField, connection);
+                        }
+                    }
+                } else if (field.isAnnotationPresent(OneToMany.class)) {
+                    if (field.getType() == List.class) {
+                        field.setAccessible(true);
+                        Field idField = entity.getClass().getDeclaredField("id");
+                        idField.setAccessible(true);
+                        Object publisherID = idField.get(entity);
+                        String selectPublisherQuery = "select * from " + fieldName + " where " + entity.getClass().getSimpleName() + "_id = " + publisherID;
+                        List<Object> publisherBooks = new ArrayList<>();
+                        try (ResultSet rs = connection.prepareStatement(selectPublisherQuery).executeQuery()) {
+                            while (rs.next()) {
+                                int bookId = rs.getInt(1);
+                                Field booksField = cls.getDeclaredField(fieldName);
+                                booksField.setAccessible(true);
+                                Object book = getParameterTypeOfTheList(booksField);
+                                String findBookQuery = "select * from " + fieldName + " where id = " + bookId;
+                                mapBook(book, findBookQuery, connection);
+                                publisherBooks.add(book);
+                            }
+                        }
+                        field.set(entity, publisherBooks);
+                    }
+                }
+            }
+        } catch (SQLException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException | NoSuchFieldException exception) {
+            exception.getMessage();
+        }
+        return entity;
+    }
+
+    public static  <T> void addBooksToPublishersList(T entity, String fieldName, String fieldValue, Object publisher, String booksField, Connection connection) {
+        try {
+            Field books = publisher.getClass().getDeclaredField(booksField);
+            books.setAccessible(true);
+            List<Object> booksList = new ArrayList<>();
+            String getBook = "select * from " + booksField + " where " + fieldName + " = " + fieldValue;
+            Object bookToAdd = entity.getClass().getConstructor().newInstance();
+            try (ResultSet rs = connection.prepareStatement(getBook).executeQuery()) {
+                while (rs.next()) {
+                    for (Field bookField : bookToAdd.getClass().getDeclaredFields()) {
+                        String name = EntityUtils.getFieldName(bookField);
+                        String val = rs.getString(name);
+                        EntityUtils.fillData(bookToAdd, bookField, val);
+                    }
+                    booksList.add(bookToAdd);
+                    bookToAdd = entity.getClass().getConstructor().newInstance();
+                }
+            }
+            books.set(publisher, booksList);
+        } catch (SQLException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException | NoSuchFieldException exeption) {
+            exeption.getMessage();
+        }
+    }
+
+    public static  void mapBook(Object book, String findBookQuery, Connection connection) {
+        try {
+            for (Field bookField : book.getClass().getDeclaredFields()) {
+                ResultSet rs2 = connection.prepareStatement(findBookQuery).executeQuery();
+                while (rs2.next()) {
+                    String f = EntityUtils.getFieldName(bookField);
+                    String v = rs2.getString(f);
+                    EntityUtils.fillData(book, bookField, v);
+                }
+            }
+        } catch (SQLException exception) {
+            exception.getMessage();
+        }
+    }
+
+    public static  Object getParameterTypeOfTheList(Field booksField) {
+        Object book = null;
+        try {
+            Class actualTypeArgument = null;
+            if (booksField.getGenericType() instanceof ParameterizedType) {
+                ParameterizedType pt = (ParameterizedType) booksField.getGenericType();
+                Type[] actualTypeArguments = pt.getActualTypeArguments();
+                actualTypeArgument = (Class) actualTypeArguments[0];
+            }
+            book = actualTypeArgument.getConstructor().newInstance();
+        } catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException | InstantiationException e) {
+            e.getMessage();
+        }
+        return book;
+    }
+
 }
 

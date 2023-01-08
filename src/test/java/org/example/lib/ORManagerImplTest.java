@@ -111,7 +111,7 @@ public class ORManagerImplTest {
 
     @Test
     @DisplayName("Find all books count in the table")
-    void test_findAll_when_requestingAllBooks_should_returnNumberOfRowsCorrectly() {
+    void test_findAll_when_requestingAllBooks_should_returnNumberOfRowsCorrectly() throws ORMException {
         Request request = new Request(dataSource, "select * from books");
 
         List<Book> expected = orManager.findAll(Book.class);
@@ -121,7 +121,7 @@ public class ORManagerImplTest {
 
     @Test
     @DisplayName("Find all publishers count in the table")
-    void test_findAll_when_requestingAllPublishers_should_returnNumberOfRowsCorrectly() {
+    void test_findAll_when_requestingAllPublishers_should_returnNumberOfRowsCorrectly() throws ORMException {
         Request request = new Request(dataSource, "select * from publishers");
 
         List<Publisher> expected = orManager.findAll(Publisher.class);
@@ -131,7 +131,7 @@ public class ORManagerImplTest {
 
     @Test
     @DisplayName("Find all books")
-    void test_findAll_when_requestingAllBooks_should_return_AllBooksCorrectly() {
+    void test_findAll_when_requestingAllBooks_should_return_AllBooksCorrectly() throws ORMException {
         Request request = new Request(dataSource, "select * from books");
 
         List<Book> expected = orManager.findAll(Book.class);
@@ -141,7 +141,7 @@ public class ORManagerImplTest {
 
     @Test
     @DisplayName("Find all publishers")
-    void test_findAll_when_requestingAllPublishers_should_return_AllBooksCorrectly() {
+    void test_findAll_when_requestingAllPublishers_should_return_AllBooksCorrectly() throws ORMException {
         Request request = new Request(dataSource, "select * from publishers");
 
         List<Publisher> expected = orManager.findAll(Publisher.class);
