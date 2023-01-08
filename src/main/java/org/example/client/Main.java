@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-import static java.lang.System.*;
+import static java.lang.System.out;
 
 public class Main {
 
@@ -82,5 +82,6 @@ public class Main {
         out.println("Find All With Saved Publishers");
         orManager.findAll(Publisher.class).forEach(out::println);
         out.println(SEPARATOR);
+        out.println(orManager.findById(11, Book.class));
     }
 }
