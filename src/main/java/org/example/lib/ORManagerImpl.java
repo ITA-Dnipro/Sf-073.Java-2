@@ -182,8 +182,24 @@ public class ORManagerImpl implements ORManager {
     }
 
     @Override
-    public <T> T refresh(T o) {
-        return null;
+    public <T> T refresh(T o) throws ORMException {
+        Object refreshed = null;
+        try {
+            Field idField = o.getClass().getDeclaredField("id");
+            idField.setAccessible(true);
+            Object objectId = idField.get(o);
+            String sql = "select * from " + o.getClass().getSimpleName() + "s where id = " + objectId;
+            ResultSet resultSet = getConnection().prepareStatement(sql).executeQuery();
+            while (resultSet.next()) {
+                int id = resultSet.getInt(1);
+                Optional<?> obj = findById(id, o.getClass());
+                refreshed = obj.get();
+            }
+        } catch (SQLException | ORMException | NoSuchFieldException | IllegalAccessException exception) {
+            throw new ORMException(exception.getMessage());
+        }
+
+        return (T) refreshed;
     }
 
     @Override
