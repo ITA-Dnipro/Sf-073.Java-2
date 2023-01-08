@@ -53,11 +53,13 @@ public class ORManagerImpl implements ORManager {
                     }
                 }
                 String sqlCreateTable = String.format("%s %s(%s);", CREATE_TABLE, tableName,
-                        String.join(", ", sql));
+                                                      String.join(", ", sql));
                 try (var prepStmt = getConnection().prepareStatement(sqlCreateTable)) {
                     prepStmt.executeUpdate();
                 } catch (SQLException exception) {
-                    LOGGER.error("Cannot create table without annotation @Entity or fields without annotation @Id, @Column or @ManyToOne", new ORMException(exception.getMessage()));
+                    LOGGER.error(
+                            "Cannot create table without annotation @Entity or fields without annotation @Id, @Column or @ManyToOne",
+                            new ORMException(exception.getMessage()));
                 }
             }
         }
@@ -70,10 +72,12 @@ public class ORManagerImpl implements ORManager {
         Long id = null;
         if (!EntityUtils.hasId(o)) {
             try (PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, connection),
-                    Statement.RETURN_GENERATED_KEYS);
-                 PreparedStatement stBefore = connection.prepareStatement(SqlUtils.selectFirstFromTable(o.getClass()))) {
+                                                                           Statement.RETURN_GENERATED_KEYS);
+                 PreparedStatement stBefore = connection.prepareStatement(
+                         SqlUtils.selectFirstFromTable(o.getClass()))) {
                 ResultSetMetaData resultSetMetaData = stBefore.getMetaData();
-                EntityUtils.setterPreparedStatementExecution(statement, resultSetMetaData, o, associatedManyToOneEntities);
+                EntityUtils.setterPreparedStatementExecution(statement, resultSetMetaData, o,
+                                                             associatedManyToOneEntities);
                 statement.executeUpdate();
                 ResultSet keys = statement.getGeneratedKeys();
                 keys.next();
@@ -81,12 +85,16 @@ public class ORManagerImpl implements ORManager {
                 EntityUtils.setFieldId(id, o);
             } catch (SQLException | IllegalAccessException | ClassNotFoundException ex) {
                 if (ex.getClass().getTypeName().equals("org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException")) {
-                    LOGGER.error(String.format("SQL exception: org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException saving %s", o.getClass()));
-                    LOGGER.info("Possible reason: columns with key constraints NON NULL || UNIQUE prevent saving this record");
-                    throw new ExistingObjectException("Please provide non existing entity or check for duplicate constraint fields");
+                    LOGGER.error(String.format(
+                            "SQL exception: org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException saving %s",
+                            o.getClass()));
+                    LOGGER.info(
+                            "Possible reason: columns with key constraints NON NULL || UNIQUE prevent saving this record");
+                    throw new ExistingObjectException(
+                            "Please provide non existing entity or check for duplicate constraint fields");
                 }
             }
-            try(ResultSet rs = connection.prepareStatement(SqlUtils.findByIdQuery(id, o.getClass())).executeQuery()){
+            try (ResultSet rs = connection.prepareStatement(SqlUtils.findByIdQuery(id, o.getClass())).executeQuery()) {
                 rs.next();
                 EntityUtils.addNewRecordToAssociatedManyToOneCollection(o, rs, associatedManyToOneEntities);
                 EntityUtils.saveNewRecordFromAssociatedOneToManyCollection(this, o);
@@ -109,7 +117,8 @@ public class ORManagerImpl implements ORManager {
 
         String sql = String.format("INSERT INTO %s (%s) VALUES (%s)", tableName, fieldList, valueList);
         try {
-            PreparedStatement preparedStatement = this.connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            PreparedStatement preparedStatement = this.connection.prepareStatement(sql,
+                                                                                   Statement.RETURN_GENERATED_KEYS);
             preparedStatement.execute();
             ResultSet resultSet = preparedStatement.getGeneratedKeys();
             while (resultSet.next()) {
@@ -118,8 +127,10 @@ public class ORManagerImpl implements ORManager {
             resultSet.close();
             LOGGER.info(String.format("Successfully added %s to the database", o.getClass().getSimpleName()));
         } catch (SQLException exception) {
-            LOGGER.error(String.format("%s with that name already exists in the database. The name of the %s should be UNIQUE"
-                    , o.getClass().getSimpleName(), o.getClass().getSimpleName()), new ExistingObjectException(exception.getMessage()));
+            LOGGER.error(String.format(
+                                 "%s with that name already exists in the database. The name of the %s should be UNIQUE"
+                                 , o.getClass().getSimpleName(), o.getClass().getSimpleName()),
+                         new ExistingObjectException(exception.getMessage()));
         }
     }
 
@@ -140,10 +151,9 @@ public class ORManagerImpl implements ORManager {
     public <T> List<T> findAll(Class<T> cls) throws ORMException {
         List<T> result = new ArrayList<>();
         String sql = FIND_ALL + EntityUtils.getTableName(cls) + ";";
-
         try (ResultSet resultSet = getConnection().prepareStatement(sql).executeQuery()) {
             while (resultSet.next()) {
-                T obj = mapObject(cls, resultSet);
+                T obj = EntityUtils.mapObject(cls, resultSet, connection);
                 result.add(obj);
             }
         } catch (SQLException exception) {
@@ -151,116 +161,6 @@ public class ORManagerImpl implements ORManager {
             throw new ORMException(exception.getMessage());
         }
         return result;
-    }
-    private <T> T mapObject(Class<T> cls, ResultSet resultSet) {
-        T entity = null;
-        try {
-            entity = cls.getConstructor().newInstance();
-            Field[] declaredFields = entity.getClass().getDeclaredFields();
-            for (Field field : declaredFields) {
-                field.setAccessible(true);
-                String fieldName = EntityUtils.getFieldName(field);
-                String fieldValue;
-                if (field.isAnnotationPresent(Id.class) || field.isAnnotationPresent(Column.class)) {
-                    fieldValue = resultSet.getString(fieldName);
-                    EntityUtils.fillData(entity, field, fieldValue);
-                } else if (field.isAnnotationPresent(ManyToOne.class)) {
-                    fieldValue = resultSet.getString(fieldName);
-                    if (fieldValue != null) {
-                        Class<?> fieldType = field.getType();
-                        Object o = fieldType.getConstructor().newInstance();
-                        String publisherTableName = o.getClass().getAnnotation(Table.class).name();
-                        String findPublisherQuery = "select * from " + publisherTableName + " where id = " + fieldValue;
-                        Object publisher = fieldType.getConstructor().newInstance();
-                        String booksField = "";
-                        Class<?> booksFieldType = null;
-                        for (Field publisherField : publisher.getClass().getDeclaredFields()) {
-                            ResultSet rs = getConnection().prepareStatement(findPublisherQuery).executeQuery();
-                            while (rs.next()) {
-                                String f = EntityUtils.getFieldName(publisherField);
-                                if (!publisherField.isAnnotationPresent(OneToMany.class)) {
-                                    String v = rs.getString(f);
-                                    EntityUtils.fillData(publisher, publisherField, v);
-                                } else {
-                                    booksField = publisherField.getName();
-                                    booksFieldType = publisherField.getType();
-                                }
-                            }
-                        }
-                        field.set(entity, publisher);
-                        if (booksFieldType == List.class) {
-                            addBooksToPublishersList(entity, fieldName, fieldValue, publisher, booksField);
-                        }
-                    }
-                } else if (field.isAnnotationPresent(OneToMany.class)) {
-                    if (field.getType() == List.class) {
-                        field.setAccessible(true);
-                        Field idField = entity.getClass().getDeclaredField("id");
-                        idField.setAccessible(true);
-                        Object publisherID = idField.get(entity);
-                        String selectPublisherQuery = "select * from " + fieldName + " where " + entity.getClass().getSimpleName() + "_id = " + publisherID;
-                        List<Object> publisherBooks = new ArrayList<>();
-                        try (ResultSet rs = getConnection().prepareStatement(selectPublisherQuery).executeQuery()) {
-                            while (rs.next()) {
-                                int bookId = rs.getInt(1);
-                                Field booksField = cls.getDeclaredField(fieldName);
-                                booksField.setAccessible(true);
-                                Object book = getParameterTypeOfTheList(booksField);
-                                String findBookQuery = "select * from " + fieldName + " where id = " + bookId;
-                                mapBook(book, findBookQuery);
-                                publisherBooks.add(book);
-                            }
-                        }
-                        field.set(entity, publisherBooks);
-                    }
-                }
-            }
-        } catch (SQLException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException | NoSuchFieldException throwables) {
-            throwables.printStackTrace();
-        }
-        return entity;
-    }
-
-    private <T> void addBooksToPublishersList(T entity, String fieldName, String fieldValue, Object publisher, String booksField) throws NoSuchFieldException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, SQLException {
-        Field books = publisher.getClass().getDeclaredField(booksField);
-        books.setAccessible(true);
-        List<Object> booksList = new ArrayList<>();
-        String getBook = "select * from " + booksField + " where " + fieldName + " = " + fieldValue;
-        Object bookToAdd = entity.getClass().getConstructor().newInstance();
-        try (ResultSet rs = getConnection().prepareStatement(getBook).executeQuery()) {
-            while (rs.next()) {
-                for (Field bookField : bookToAdd.getClass().getDeclaredFields()) {
-                    String name = EntityUtils.getFieldName(bookField);
-                    String val = rs.getString(name);
-                    EntityUtils.fillData(bookToAdd, bookField, val);
-                }
-                booksList.add(bookToAdd);
-                bookToAdd = entity.getClass().getConstructor().newInstance();
-            }
-        }
-        books.set(publisher, booksList);
-    }
-
-    private void mapBook(Object book, String findBookQuery) throws SQLException {
-        for (Field bookField : book.getClass().getDeclaredFields()) {
-            ResultSet rs2 = getConnection().prepareStatement(findBookQuery).executeQuery();
-            while (rs2.next()) {
-                String f = EntityUtils.getFieldName(bookField);
-                String v = rs2.getString(f);
-                EntityUtils.fillData(book, bookField, v);
-            }
-        }
-    }
-
-    private Object getParameterTypeOfTheList(Field booksField) throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
-        Class actualTypeArgument = null;
-        if (booksField.getGenericType() instanceof ParameterizedType) {
-            ParameterizedType pt = (ParameterizedType) booksField.getGenericType();
-            Type[] actualTypeArguments = pt.getActualTypeArguments();
-            actualTypeArgument = (Class) actualTypeArguments[0];
-        }
-        Object book = actualTypeArgument.getConstructor().newInstance();
-        return book;
     }
 
     @Override
@@ -305,14 +205,16 @@ public class ORManagerImpl implements ORManager {
                     idField.set(o, id);
                     idValue = EntityUtils.getFieldIdValue(o, idField);
                     deleteQuery = String.format("DELETE FROM %s WHERE %s = %s", tableName, idName, idValue);
-                    LOGGER.info(String.format("Deleted %s with title %s", o.getClass().getSimpleName(), ((Book) o).getTitle()));
+                    LOGGER.info(String.format("Deleted %s with title %s", o.getClass().getSimpleName(),
+                                              ((Book) o).getTitle()));
                 }
             } catch (Exception exception) {
                 LOGGER.error(String.format("Cannot delete %s with that ID", o.getClass().getSimpleName()),
-                        new ORMException(exception.getMessage()));
+                             new ORMException(exception.getMessage()));
             }
         } else if (o.getClass().equals(Publisher.class)) {
-            String sql2 = String.format("SELECT `id` FROM %s WHERE `name` = '%s';", tableName, ((Publisher) o).getName());
+            String sql2 = String.format("SELECT `id` FROM %s WHERE `name` = '%s';", tableName,
+                                        ((Publisher) o).getName());
             try {
                 resultSet = this.connection.prepareStatement(sql2).executeQuery();
 
@@ -324,11 +226,12 @@ public class ORManagerImpl implements ORManager {
                     idField.set(o, id);
                     idValue = EntityUtils.getFieldIdValue(o, idField);
                     deleteQuery = String.format("DELETE FROM %s WHERE %s = %s", tableName, idName, idValue);
-                    LOGGER.info(String.format("Deleted %s with title %s", o.getClass().getSimpleName(), ((Publisher) o).getName()));
+                    LOGGER.info(String.format("Deleted %s with title %s", o.getClass().getSimpleName(),
+                                              ((Publisher) o).getName()));
                 }
             } catch (Exception exception) {
                 LOGGER.error(String.format("Cannot delete %s with that ID", o.getClass().getSimpleName()),
-                        new ORMException(exception.getMessage()));
+                             new ORMException(exception.getMessage()));
             }
         }
 
