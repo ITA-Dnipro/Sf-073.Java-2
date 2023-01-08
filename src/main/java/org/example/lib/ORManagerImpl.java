@@ -13,6 +13,7 @@ import javax.sql.DataSource;
 import java.io.Serializable;
 import java.lang.reflect.*;
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -87,7 +88,7 @@ public class ORManagerImpl implements ORManager {
                     throw new ExistingObjectException("Please provide non existing entity or check for duplicate constraint fields");
                 }
             }
-            try(ResultSet rs = connection.prepareStatement(SqlUtils.findByIdQuery(id, o.getClass())).executeQuery()){
+            try (ResultSet rs = connection.prepareStatement(SqlUtils.findByIdQuery(id, o.getClass())).executeQuery()) {
                 rs.next();
                 EntityUtils.addNewRecordToAssociatedManyToOneCollection(o, rs, associatedManyToOneEntities);
                 EntityUtils.saveNewRecordFromAssociatedOneToManyCollection(this, o);
@@ -134,7 +135,92 @@ public class ORManagerImpl implements ORManager {
         } catch (SQLException exception) {
             throw new ORMException(exception.getMessage());
         }
-        return EntityUtils.createEntity(cls, resultSet);
+        return createEntity(cls, resultSet);
+    }
+
+    private <T> Optional<T> createEntity(Class<T> cls, ResultSet resultSet) throws ORMException {
+        try {
+            if (!resultSet.next()) {
+                LOGGER.info(String.format("%s with that ID doesnt exist", cls.getSimpleName()));
+                return Optional.empty();
+            }
+        } catch (SQLException exception) {
+            throw new ORMException(exception.getMessage());
+        }
+
+        String fieldName = null;
+        T entity;
+        try {
+            entity = cls.getDeclaredConstructor().newInstance();
+
+            Field[] declaredFields = cls.getDeclaredFields();
+            for (Field declaredField : declaredFields) {
+                if (!declaredField.isAnnotationPresent(Column.class) &&
+                        !declaredField.isAnnotationPresent(Id.class) &&
+                        !declaredField.isAnnotationPresent(ManyToOne.class)) {
+                    continue;
+                }
+
+                if (declaredField.isAnnotationPresent(Column.class)) {
+                    Column annotation = declaredField.getAnnotation(Column.class);
+                    if (!annotation.name().equals("")) {
+                        fieldName = annotation.name();
+                    } else {
+                        fieldName = declaredField.getName();
+                    }
+                } else if (declaredField.isAnnotationPresent(Id.class)) {
+                    fieldName = declaredField.getName();
+                } else if (declaredField.isAnnotationPresent(ManyToOne.class)) {
+                    ManyToOne annotation = declaredField.getAnnotation(ManyToOne.class);
+                    if (!annotation.columnName().equals("")) {
+                        fieldName = annotation.columnName();
+                    } else {
+                        fieldName = declaredField.getName();
+                    }
+                }
+
+
+                String value = resultSet.getString(fieldName);
+                entity = fillData(entity, declaredField, value);
+            }
+        } catch (NoSuchMethodException | IllegalAccessException | SQLException | InvocationTargetException |
+                 InstantiationException exception) {
+            LOGGER.error("Cannot create entity");
+            throw new ORMException(exception.getMessage());
+        }
+        return Optional.of(entity);
+    }
+
+    private <T> T fillData(T entity, Field field, String value) {
+        field.setAccessible(true);
+        try {
+            if (field.getType() == long.class || field.getType() == Long.class) {
+                field.set(entity, Long.parseLong(value));
+            } else if (field.getType() == int.class || field.getType() == Integer.class) {
+                field.set(entity, Integer.parseInt(value));
+            } else if (field.getType() == LocalDate.class) {
+                field.set(entity, LocalDate.parse(value));
+            } else if (field.getType() == String.class) {
+                field.set(entity, value);
+            } else if (field.getType() == field.getType()) {
+                Optional<Object> optionalPublisher = findById(value, (Class<Object>) field.getType());
+                if (optionalPublisher.isEmpty()) {
+                    LOGGER.info(String.format("This %s has no %s record!", entity.getClass().getSimpleName(), field.getType().getSimpleName()));
+                }
+                optionalPublisher.ifPresent(o -> {
+                    try {
+                        field.set(entity, o);
+                    } catch (IllegalAccessException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+            }
+        } catch (IllegalAccessException exception) {
+            LOGGER.error(String.format("Unsupported type %s", field.getType()), new UnsupportedTypeException(exception.getMessage()));
+        } catch (ORMException e) {
+            LOGGER.error("Object with this ID does not exists");
+        }
+        return entity;
     }
 
     @Override
@@ -155,7 +241,7 @@ public class ORManagerImpl implements ORManager {
                     String name = EntityUtils.getFieldName(field);
                     String value = resultSet.getString(name);
                     field.setAccessible(true);
-                    EntityUtils.fillData(obj, field, value);
+                    fillData(obj, field, value);
                 }
                 result.add(obj);
             }
