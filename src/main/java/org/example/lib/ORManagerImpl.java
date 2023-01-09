@@ -17,6 +17,8 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Stream;
 
+import static java.lang.System.out;
+
 
 public class ORManagerImpl implements ORManager {
     private static final String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS";
@@ -89,12 +91,11 @@ public class ORManagerImpl implements ORManager {
                     throw new ExistingObjectException("Please provide non existing entity or check for duplicate constraint fields");
                 }
             }
-            associatedManyToOneEntities.forEach((key, value) -> out.println(key + " : " + value));
             try (ResultSet rs = connection.prepareStatement(SqlUtils.findByIdQuery(id, o.getClass())).executeQuery()) {
                 rs.next();
                 EntityUtils.addNewRecordToAssociatedManyToOneCollection(o, rs, associatedManyToOneEntities);
                 EntityUtils.saveNewRecordFromAssociatedOneToManyCollection(this, o);
-                String successMessage = "Successfully SAVED" + o + "to the database";
+                String successMessage = "Successfully SAVED " + o + " to the database";
                 LOGGER.info(successMessage);
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
@@ -173,7 +174,34 @@ public class ORManagerImpl implements ORManager {
 
     @Override
     public <T> T merge(T o) {
-        return null;
+        Map<String, Object> associatedManyToOneEntities = new HashMap<>();
+        Map<String, Object> associatedOneToManyEntities = new HashMap<>();
+        Long id = null;
+        if (EntityUtils.hasId(o)) {
+            try(ResultSet rs = connection
+                    .prepareStatement(SqlUtils.findByIdQuery(o),
+                            ResultSet.TYPE_SCROLL_SENSITIVE,
+                            ResultSet.CONCUR_UPDATABLE).executeQuery()){
+                rs.next();
+                EntityUtils.updateResultSetExecution(o, rs, associatedManyToOneEntities, associatedOneToManyEntities);
+                id = rs.getLong(EntityUtils.getIdFieldName(o.getClass()));
+                rs.updateRow();
+            }catch(SQLException | IllegalAccessException | ClassNotFoundException ex){
+                LOGGER.error("Error in MERGE method occurred!");
+                ex.printStackTrace();
+            }
+            associatedManyToOneEntities.forEach((key, value) -> out.println(key + " : " + value));
+            try (ResultSet rs = connection.prepareStatement(SqlUtils.findByIdQuery(id, o.getClass())).executeQuery()) {
+                rs.next();
+                EntityUtils.addNewRecordToAssociatedManyToOneCollection(o, rs, associatedManyToOneEntities);
+                EntityUtils.saveNewRecordFromAssociatedOneToManyCollection(this, o);
+                String successMessage = "Successfully MERGED " + o + " to the database";
+                LOGGER.info(successMessage);
+            } catch (IllegalAccessException | SQLException | ORMException e) {
+                e.printStackTrace();
+            }
+        }
+        return o;
     }
 
     @Override
