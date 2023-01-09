@@ -11,7 +11,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 
-import java.lang.reflect.Type;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.*;
@@ -49,18 +48,13 @@ class EntityUtilsTest {
 
 
     }
-    @Test
-    void should_Test_Collection_From_collectEntityFieldTypeValues_Method() throws IllegalAccessException, ClassNotFoundException {
-        Book book = new Book("Test Book3", LocalDate.of(2021, 2, 24), new Publisher("pub1"));
-        Publisher publisher = new Publisher("Publisher2");
-        Map<String, List<Object>> actualCollection = EntityUtils.collectEntityFieldTypeValues(book);
-        actualCollection.forEach((key, value) -> out.println(key + " : " + value));
-    }
+
 
     @Test
     void should_Test_Collection_From_collectRecordColumnTypeValues_Method() throws SQLException, ORMException, IllegalAccessException, ClassNotFoundException {
         Publisher publisher = orManager.save(new Publisher("Publisher113"));
-        Book bookWithPublisher = orManager.save(new Book("Book113", LocalDate.now(), publisher));
+        Object bookWithPublisher = orManager.save(new Book("Book113", LocalDate.now(), publisher));
+        Map<String, Object> associatedManyToOneEntities = new HashMap<>();
 
         ResultSet resultSet = connection.prepareStatement(SqlUtils.findByIdQuery(bookWithPublisher)).executeQuery();
         resultSet.next();
@@ -70,7 +64,7 @@ class EntityUtilsTest {
         out.println("-------------------------------------");
         out.println("-------------------------------------");
         out.println("BookWithPublisher -> values from ENTITY -> saved From bookWithPublisher object");
-        Map<String, List<Object>> actualBookWithPubCollection = EntityUtils.collectEntityFieldTypeValues(bookWithPublisher);
+        Map<String, List<Object>> actualBookWithPubCollection = EntityUtils.collectEntityFieldTypeValues(bookWithPublisher, associatedManyToOneEntities);
         actualBookWithPubCollection.forEach((key, value) -> out.println(key + " : " + value));
         out.println("-------------------------------------");
         out.println("-------------------------------------");
