@@ -12,9 +12,9 @@ import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.db.api.Assertions.assertThat;
+
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ORManagerImplTest {
     private static DataSource dataSource;
@@ -49,9 +49,9 @@ public class ORManagerImplTest {
         Table table = new Table(dataSource, "books");
 
         assertThat(table).column(0).hasColumnName("id")
-                .column(1).hasColumnName("title")
-                .column(2).hasColumnName("published_at")
-                .column(3).hasColumnName("publisher_id");
+                         .column(1).hasColumnName("title")
+                         .column(2).hasColumnName("published_at")
+                         .column(3).hasColumnName("publisher_id");
     }
 
     @Test
@@ -61,7 +61,7 @@ public class ORManagerImplTest {
         Table table = new Table(dataSource, "publishers");
 
         assertThat(table).column(0).hasColumnName("id")
-                .column(1).hasColumnName("name");
+                         .column(1).hasColumnName("name");
     }
 
     @Test
@@ -71,8 +71,8 @@ public class ORManagerImplTest {
         Request request = new Request(dataSource, "select * from publishers");
 
         assertThat(request).row(0)
-                .value().isEqualTo(1)
-                .value().isEqualTo("Test Publisher");
+                           .value().isEqualTo(1)
+                           .value().isEqualTo("Test Publisher");
     }
 
     @Test
@@ -82,9 +82,9 @@ public class ORManagerImplTest {
         Request request = new Request(dataSource, "select * from books");
 
         assertThat(request).row(0)
-                .value().isEqualTo(1)
-                .value().isEqualTo("Test Book")
-                .value().isEqualTo(LocalDate.now());
+                           .value().isEqualTo(1)
+                           .value().isEqualTo("Test Book")
+                           .value().isEqualTo(LocalDate.now());
     }
 
     @Test
@@ -96,9 +96,9 @@ public class ORManagerImplTest {
         Publisher publisher = orManager.findById(1, Publisher.class).get();
 
         assertThat(request).column("id")
-                .value().isEqualTo(publisher.getId())
-                .column("name")
-                .value().isEqualTo("Test Publisher");
+                           .value().isEqualTo(publisher.getId())
+                           .column("name")
+                           .value().isEqualTo("Test Publisher");
     }
 
     @Test
@@ -110,11 +110,11 @@ public class ORManagerImplTest {
         Book book = orManager.findById(1, Book.class).get();
 
         assertThat(request).column("id")
-                .value().isEqualTo(book.getId())
-                .column("title")
-                .value().isEqualTo("Test Book")
-                .column("published_at")
-                .value().isEqualTo(LocalDate.now());
+                           .value().isEqualTo(book.getId())
+                           .column("title")
+                           .value().isEqualTo("Test Book")
+                           .column("published_at")
+                           .value().isEqualTo(LocalDate.now());
     }
 
     @Test
@@ -169,7 +169,7 @@ public class ORManagerImplTest {
         Request request = new Request(dataSource, "select * from books");
 
         assertThat(request).column("title")
-                .containsValues("Test Book");
+                           .containsValues("Test Book", "Test book 2");
     }
 
     @Test
@@ -179,7 +179,7 @@ public class ORManagerImplTest {
         Request request = new Request(dataSource, "select * from publishers");
 
         assertThat(request).column("name")
-                .containsValues("Test Publisher");
+                           .containsValues("Test Publisher", "Test Publisher 2");
     }
 
     @Test
@@ -191,8 +191,6 @@ public class ORManagerImplTest {
         Request request = new Request(dataSource, "select * from books where id = 1");
 
         assertThat(request).isEmpty();
-
-
     }
 
     @Test
@@ -204,7 +202,31 @@ public class ORManagerImplTest {
         Request request = new Request(dataSource, "select * from publishers where id = 1");
 
         assertThat(request).isEmpty();
+    }
 
+    @Test
+    @Order(16)
+    @DisplayName("Refresh Book with id = 2")
+    void test_refresh_when_refreshingBookWithIdTwo_should_returnRefreshedBook() throws ORMException {
+        Request request = new Request(dataSource, "select * from books where id = 2");
 
+        Book book = orManager.findById(2, Book.class).get();
+        book.setTitle("new title");
+        Book refresh = orManager.refresh(book);
+
+        assertThat(request).equals(refresh);
+    }
+
+    @Test
+    @Order(17)
+    @DisplayName("Refresh Publisher with id = 2")
+    void test_refresh_when_refreshingPublisherWithIdTwo_should_returnRefreshedPublisher() throws ORMException {
+        Request request = new Request(dataSource, "select * from publishers where id = 2");
+
+        Publisher publisher = orManager.findById(2, Publisher.class).get();
+        publisher.setName("new name");
+        Publisher refresh = orManager.refresh(publisher);
+
+        assertThat(request).equals(refresh);
     }
 }

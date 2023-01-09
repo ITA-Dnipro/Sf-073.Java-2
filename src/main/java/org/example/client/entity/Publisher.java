@@ -2,7 +2,9 @@ package org.example.client.entity;
 
 import org.example.lib.annotation.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.StringJoiner;
 
 @Entity
 @Table(name = "publishers")

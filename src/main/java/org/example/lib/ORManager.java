@@ -40,7 +40,7 @@ public interface ORManager {
 
     <T> T merge(T o) throws ORMException, SQLException;
 
-    <T> T refresh(T o);
+    <T> T refresh(T o) throws ORMException;
 
     boolean delete(Object o) throws ORMException;
 }

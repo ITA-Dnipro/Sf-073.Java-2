@@ -14,8 +14,6 @@ public class Book {
     private String title;
     @Column(name = "published_at")
     private LocalDate publishedAt;
-
-    // 2nd stage:
     @ManyToOne(columnName = "publisher_id")
     private Publisher publisher;
 

@@ -6,8 +6,19 @@ import java.util.*;
 public class SqlUtils {
 
     private static final String SELECT_ALL_FROM = "SELECT * FROM ";
+    private static final String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS";
+    private static final String FIND_ALL = "SELECT * FROM ";
 
     private SqlUtils() {
+    }
+
+    public static String createSqlTable(String tableName, ArrayList<String> sqlArray) {
+        return String.format("%s %s(%s);", CREATE_TABLE, tableName,
+                             String.join(", ", sqlArray));
+    }
+
+    public static String findAll() {
+        return FIND_ALL;
     }
 
     public static String saveQuery(Object o, Connection connection) throws SQLException {
