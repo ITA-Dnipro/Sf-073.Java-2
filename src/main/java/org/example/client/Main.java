@@ -64,7 +64,9 @@ public class Main {
         Book book606 = new Book("Book606@OneToMany202", LocalDate.now(), publisher202);
         publisher202.setBooks(Set.of(book404, book505, book606));
         Publisher publisherRecord2 = orManager.save(publisher202);
+        out.println("Print Publisher@OneToMany202:");
         out.println(publisherRecord2);
+        out.println("Publisher@OneToMany202 getBooks(): ");
         out.println(publisherRecord2.getBooks());
         out.println(SEPARATOR);
         Publisher publisher303 = orManager.save(new Publisher("Publisher@OneToMany303"));

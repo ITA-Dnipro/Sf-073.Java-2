@@ -38,7 +38,7 @@ public interface ORManager {
 
     <T> Stream<T> findAllAsStream(Class<T> cls);
 
-    <T> T merge(T o);
+    <T> T merge(T o) throws ORMException, SQLException;
 
     <T> T refresh(T o);
 
