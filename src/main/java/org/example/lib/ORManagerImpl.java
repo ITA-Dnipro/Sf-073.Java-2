@@ -257,7 +257,8 @@ public class ORManagerImpl implements ORManager {
         } catch (SQLException exception) {
             throw new ORMException(exception.getMessage());
         }
-        return (T) refreshed;
+        o = (T) refreshed;
+        return o;
     }
 
     @Override
