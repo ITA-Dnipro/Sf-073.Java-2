@@ -105,7 +105,7 @@ public class Main {
         out.println(SEPARATOR);
 
         out.println("Delete publisher");
-        Publisher publisher = orManager.findById(1, Publisher.class).get();
+        Publisher publisher = orManager.findById(5, Publisher.class).get();
         orManager.delete(publisher);
         List<Publisher> all = orManager.findAll(Publisher.class);
         all.forEach(System.out::println);
