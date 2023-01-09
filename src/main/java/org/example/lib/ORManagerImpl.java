@@ -73,12 +73,10 @@ public class ORManagerImpl implements ORManager {
         Long id = null;
         if (!EntityUtils.hasId(o)) {
             try (PreparedStatement statement = connection.prepareStatement(SqlUtils.saveQuery(o, connection),
-                                                                           Statement.RETURN_GENERATED_KEYS);
-                 PreparedStatement stBefore = connection.prepareStatement(
-                         SqlUtils.selectFirstFromTable(o.getClass()))) {
+                    Statement.RETURN_GENERATED_KEYS);
+                 PreparedStatement stBefore = connection.prepareStatement(SqlUtils.selectFirstFromTable(o.getClass()))) {
                 ResultSetMetaData resultSetMetaData = stBefore.getMetaData();
-                EntityUtils.setterPreparedStatementExecution(statement, resultSetMetaData, o,
-                                                             associatedManyToOneEntities);
+                EntityUtils.setterPreparedStatementExecution(statement, resultSetMetaData, o, associatedManyToOneEntities);
                 statement.executeUpdate();
                 ResultSet keys = statement.getGeneratedKeys();
                 keys.next();
@@ -86,15 +84,12 @@ public class ORManagerImpl implements ORManager {
                 EntityUtils.setFieldId(id, o);
             } catch (SQLException | IllegalAccessException | ClassNotFoundException ex) {
                 if (ex.getClass().getTypeName().equals("org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException")) {
-                    LOGGER.error(String.format(
-                            "SQL exception: org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException saving %s",
-                            o.getClass()));
-                    LOGGER.info(
-                            "Possible reason: columns with key constraints NON NULL || UNIQUE prevent saving this record");
-                    throw new ExistingObjectException(
-                            "Please provide non existing entity or check for duplicate constraint fields");
+                    LOGGER.error(String.format("SQL exception: org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException saving %s", o.getClass()));
+                    LOGGER.info("Possible reason: columns with key constraints NON NULL || UNIQUE prevent saving this record");
+                    throw new ExistingObjectException("Please provide non existing entity or check for duplicate constraint fields");
                 }
             }
+            associatedManyToOneEntities.forEach((key, value) -> out.println(key + " : " + value));
             try (ResultSet rs = connection.prepareStatement(SqlUtils.findByIdQuery(id, o.getClass())).executeQuery()) {
                 rs.next();
                 EntityUtils.addNewRecordToAssociatedManyToOneCollection(o, rs, associatedManyToOneEntities);
