@@ -109,5 +109,9 @@ public class Main {
         orManager.delete(publisher);
         List<Publisher> all = orManager.findAll(Publisher.class);
         all.forEach(System.out::println);
+
+        out.println("Print out the Book and its Publisher");
+        out.println(orManager.findById(10, Book.class));
+
     }
 }
