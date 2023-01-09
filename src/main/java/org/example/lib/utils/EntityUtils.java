@@ -365,13 +365,6 @@ public class EntityUtils {
         Map<String, List<Object>> dataFromDB = collectRecordColumnTypeValues(rs);
         Map<String, List<Object>> dataFromEntity = collectEntityFieldTypeValues(o, newValues);
         Map<String, Object> updateMap = new HashMap<>();
-        out.println("------------------------------------");
-        out.println("------dataFromDB--------");
-        dataFromDB.forEach((key, value) -> out.println(key + " : " + value));
-        out.println("------------------------------------");
-        out.println("------dataFromEntity--------");
-        dataFromEntity.forEach((key, value) -> out.println(key + " : " + value));
-        out.println("------------------------------------");
         ResultSetMetaData resultSetMetaData = rs.getMetaData();
         int columnCount = resultSetMetaData.getColumnCount();
         for (int i = 1; i <= columnCount; i++) {
@@ -390,11 +383,6 @@ public class EntityUtils {
             }
             rs.updateObject(columnName, updateMap.get(columnName));
         }
-        updateMap.forEach((key, value) -> out.println(key + " : " + value));
-        out.println("--------associateOneToManyOldValue----------");
-        out.println(oldValues);
-        out.println("------------------------????----------");
-
         return rs;
     }
 
@@ -412,7 +400,7 @@ public class EntityUtils {
         List<?> list = getOneToManyCollection(o);
         List newList = new ArrayList<>();
         for (int i = 0; i < list.size(); i++) {
-            newList.add(orManager.merge(list.get(i)));
+            newList.add(orManager.save(list.get(i)));
         }
         setOneToManyCollection(o, newList);
     }

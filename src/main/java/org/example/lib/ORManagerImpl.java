@@ -191,16 +191,6 @@ public class ORManagerImpl implements ORManager {
                 LOGGER.error("Error in MERGE method occurred!");
                 ex.printStackTrace();
             }
-            if(!oldManyToOneReference.isEmpty() && oldManyToOneReference.get(0) != null){
-                try (ResultSet rsOld = connection.prepareStatement(SqlUtils.findByIdManyToOne((Long)oldManyToOneReference.get(0),
-                             (Class<?>) oldManyToOneReference.get(1), newManyToOneReference.get(0).toString())).executeQuery()) {
-                    while(rsOld.next()){
-                        out.println(rsOld.getString(1) + " : " + rsOld.getString(2));
-                    }
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
             try (ResultSet rs = connection.prepareStatement(SqlUtils.findByIdQuery(id, o.getClass())).executeQuery()) {
                 rs.next();
                 EntityUtils.addNewRecordToAssociatedManyToOneCollection(o, rs, associatedManyToOneEntities);
