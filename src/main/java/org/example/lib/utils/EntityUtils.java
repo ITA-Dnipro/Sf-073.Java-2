@@ -441,59 +441,6 @@ public class EntityUtils {
         }
     }
 
-    public static <T> Optional<T> createEntity(Class<T> cls, ResultSet resultSet) throws ORMException {
-        try {
-            if (!resultSet.next()) {
-                LOGGER.info(String.format("%s with that ID doesnt exist", cls.getSimpleName()));
-                return Optional.empty();
-            }
-        } catch (SQLException exception) {
-            throw new ORMException(exception.getMessage());
-        }
-
-        String fieldName = null;
-        T entity;
-        try {
-            entity = cls.getDeclaredConstructor().newInstance();
-
-            Field[] declaredFields = cls.getDeclaredFields();
-            for (Field declaredField : declaredFields) {
-                if (!declaredField.isAnnotationPresent(Column.class) &&
-                        !declaredField.isAnnotationPresent(Id.class) &&
-                        !declaredField.isAnnotationPresent(ManyToOne.class)) {
-                    continue;
-                }
-
-                if (declaredField.isAnnotationPresent(Column.class)) {
-                    Column annotation = declaredField.getAnnotation(Column.class);
-                    if (!annotation.name().equals("")) {
-                        fieldName = annotation.name();
-                    } else {
-                        fieldName = declaredField.getName();
-                    }
-                } else if (declaredField.isAnnotationPresent(Id.class)) {
-                    fieldName = declaredField.getName();
-                } else if (declaredField.isAnnotationPresent(ManyToOne.class)) {
-                    ManyToOne annotation = declaredField.getAnnotation(ManyToOne.class);
-                    if (!annotation.columnName().equals("")) {
-                        fieldName = annotation.columnName();
-                    } else {
-                        fieldName = declaredField.getName();
-                    }
-                }
-
-
-                String value = resultSet.getString(fieldName);
-                entity = fillData(entity, declaredField, value);
-            }
-        } catch (NoSuchMethodException | IllegalAccessException | SQLException | InvocationTargetException |
-                InstantiationException exception) {
-            LOGGER.error("Cannot create entity");
-            throw new ORMException(exception.getMessage());
-        }
-        return Optional.of(entity);
-    }
-
     public static <T> T fillData(T entity, Field field, String value) {
         field.setAccessible(true);
         try {
