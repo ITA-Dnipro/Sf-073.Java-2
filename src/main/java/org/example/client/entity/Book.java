@@ -74,6 +74,9 @@ public class Book {
         if (publisher != null) {
             sj.add("[publisherId = " + publisher.getId());
             sj.add("publisherName = " + publisher.getName());
+            if (publisher.getBooks() == null) {
+                return sj.toString();
+            }
             if (publisher.getBooks().size() > 0) {
                 sj.add("book ids: ");
                 publisher.getBooks().forEach(b -> {
