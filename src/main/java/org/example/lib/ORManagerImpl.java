@@ -34,7 +34,7 @@ public class ORManagerImpl implements ORManager {
                 String tableName = EntityUtils.getTableName(cls);
                 Field[] declaredFields = cls.getDeclaredFields();
                 ArrayList<String> sqlArray = new ArrayList<>();
-                EntityUtils.buildingSqlCreateTable(declaredFields, sqlArray);
+                EntityUtils.buildSqlCreateTable(declaredFields, sqlArray);
                 String sqlCreateTable = SqlUtils.createSqlTable(tableName, sqlArray);
                 try (var prepStmt = getConnection().prepareStatement(sqlCreateTable)) {
                     prepStmt.executeUpdate();
@@ -163,20 +163,17 @@ public class ORManagerImpl implements ORManager {
     @Override
     public <T> T refresh(T o) throws ORMException {
         Object refreshed = null;
-        try {
-            Field idField = EntityUtils.getIdColumn(o.getClass());
-            idField.setAccessible(true);
-            Object objectId = EntityUtils.getFieldIdValue(o, idField);
-            String sql = SqlUtils.findByIdQuery(Long.parseLong(objectId.toString()), o.getClass());
-            try (ResultSet resultSet = getConnection().prepareStatement(sql).executeQuery()) {
-                while (resultSet.next()) {
-                    refreshed = EntityUtils.mapObject(o.getClass(), resultSet, connection);
-                }
+        Field idField = EntityUtils.getIdColumn(o.getClass());
+        idField.setAccessible(true);
+        Object objectId = EntityUtils.getFieldIdValue(o, idField);
+        String sql = SqlUtils.findByIdQuery(Long.parseLong(objectId.toString()), o.getClass());
+        try (ResultSet resultSet = getConnection().prepareStatement(sql).executeQuery()) {
+            while (resultSet.next()) {
+                refreshed = EntityUtils.mapObject(o.getClass(), resultSet, connection);
             }
-        } catch (SQLException | ORMException exception) {
+        } catch (SQLException exception) {
             throw new ORMException(exception.getMessage());
         }
-
         return (T) refreshed;
     }
 
