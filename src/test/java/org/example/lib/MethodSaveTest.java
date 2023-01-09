@@ -9,6 +9,7 @@ import org.example.lib.utils.*;
 import org.junit.jupiter.api.*;
 
 import java.nio.file.Path;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -18,22 +19,29 @@ import java.util.Properties;
 
 
 class MethodSaveTest {
-    private static final Path path = Path.of(Constants.Connection.PROPERTIES_FILE_NAME);
-    private static final Properties properties = PropertyConfiguration.readPropertiesFromFile(path);
-    private final Source h2Source = new Source(properties.getProperty(Constants.Connection.URL), "", "");
-    private static ORManager orManager;
-    private static ORManagerImpl orManagerImpl;
 
-    static {
-        try {
-            orManager = ORManager.withDataSource(new HikariDataSource());
-            orManagerImpl = (ORManagerImpl) orManager;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    static ORManager orManager;
+    static ORManagerImpl orManagerImpl;
+    static Connection connection;
+
+    @BeforeAll
+    static void setUp() throws SQLException {
+        orManager = ORManager.withDataSource(new HikariDataSource());
+        orManagerImpl = (ORManagerImpl) orManager;
+        connection = orManagerImpl.getConnection();
+        orManager.register(Publisher.class);
+        orManager.register(Book.class);
+
     }
 
-    MethodSaveTest() throws SQLException {
+    @BeforeEach
+    void deleteAllRecords() throws SQLException {
+        deleteAllRowsFromTable("books");
+        deleteAllRowsFromTable("publishers");
+    }
+
+    public static void deleteAllRowsFromTable(String tableName) throws SQLException {
+        connection.prepareStatement("DELETE FROM " + tableName).execute();
     }
 
     @Test

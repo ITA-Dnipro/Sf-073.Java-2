@@ -8,6 +8,7 @@ import org.example.lib.ORManagerImpl;
 import org.example.lib.exception.ORMException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 
@@ -24,10 +25,23 @@ class EntityUtilsTest {
     static Connection connection;
 
     @BeforeAll
-    static void setUp() throws SQLException{
+    static void setUp() throws SQLException {
         orManager = ORManager.withDataSource(new HikariDataSource());
         orManagerImpl = (ORManagerImpl) orManager;
         connection = orManagerImpl.getConnection();
+        orManager.register(Publisher.class);
+        orManager.register(Book.class);
+
+    }
+
+    @BeforeEach
+    void deleteAllRecords() throws SQLException {
+        deleteAllRowsFromTable("books");
+        deleteAllRowsFromTable("publishers");
+    }
+
+    public static void deleteAllRowsFromTable(String tableName) throws SQLException {
+        connection.prepareStatement("DELETE FROM " + tableName).execute();
     }
 
     @Test
@@ -64,13 +78,7 @@ class EntityUtilsTest {
         out.println("-------------------------------------");
         out.println("-------------------------------------");
         out.println("BookWithPublisher -> values from ENTITY -> saved From bookWithPublisher object");
-        Map<String, List<Object>> actualBookWithPubCollection = EntityUtils.collectEntityFieldTypeValues(bookWithPublisher, associatedManyToOneEntities);
-        actualBookWithPubCollection.forEach((key, value) -> out.println(key + " : " + value));
-        out.println("-------------------------------------");
-        out.println("-------------------------------------");
-        out.println(publisher.getBooks());
-        out.println("-------------------------------------");
-        out.println("-------------------------------------");
+
     }
 
 
