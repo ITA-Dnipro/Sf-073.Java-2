@@ -2,9 +2,7 @@ package org.example.client.entity;
 
 import org.example.lib.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.StringJoiner;
+import java.util.*;
 
 @Entity
 @Table(name = "publishers")
@@ -15,13 +13,13 @@ public class Publisher {
     private String name;
 
     @OneToMany(mappedBy = "publishers")
-    private List<Book> books;
+    private Set<Book> books;
 
     public Publisher() {
     }
 
     public Publisher(String name) {
-        this.books = new ArrayList<>();
+        this.books = new HashSet<>();
         this.name = name;
     }
 
@@ -41,11 +39,11 @@ public class Publisher {
         this.name = name;
     }
 
-    public List<Book> getBooks() {
+    public Set<Book> getBooks() {
         return books;
     }
 
-    public void setBooks(List<Book> books) {
+    public void setBooks(Set<Book> books) {
         this.books = books;
     }
 
