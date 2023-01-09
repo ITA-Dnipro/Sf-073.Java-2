@@ -1,7 +1,5 @@
 package org.example.lib.utils;
 
-import org.example.client.entity.Book;
-import org.example.client.entity.Publisher;
 import org.example.lib.ORManagerImpl;
 import org.example.lib.annotation.*;
 import org.example.lib.exception.*;
@@ -305,9 +303,9 @@ public class EntityUtils {
                 for (Field field : fields) {
                     field.setAccessible(true);
                     if (EntityUtils.hasOneToManyAnnotation(field)) {
-                        if (Objects.equals(field.getType().getName(), "java.util.Set") && field.get(associateEntity) != null) {
-                            Set<T> fieldValue = (Set<T>) field.get(associateEntity);
-                            Set<T> newListValue = new HashSet<>(fieldValue);
+                        if (Objects.equals(field.getType().getName(), "java.util.List") && field.get(associateEntity) != null) {
+                            List<T> fieldValue = (List<T>) field.get(associateEntity);
+                            List<T> newListValue = new ArrayList<>(fieldValue);
                             newListValue.add(newRecord);
                             field.set(associateEntity, newListValue);
                         }
@@ -321,8 +319,8 @@ public class EntityUtils {
         return "id";
     }
 
-    public static Map<String, List<Object>> collectEntityFieldTypeValues(Object object, Map<String, Object> associatedManyToOneEntities) throws
-            IllegalAccessException, ClassNotFoundException {
+    public static Map<String, List<Object>> collectEntityFieldTypeValues(Object object, List<Object> newValues) throws
+            IllegalAccessException{
         Map<String, List<Object>> entityFieldTypeValues = new HashMap<>();
         Field[] entityFields = object.getClass().getDeclaredFields();
         for (Field field : entityFields) {
@@ -338,11 +336,11 @@ public class EntityUtils {
             }
             if (hasManyToOneAnnotation(field)) {
                 Class<?> fieldClass = fieldValue.getClass();
-                associatedManyToOneEntities.put(getManyToOneColumnNameValue(object.getClass()), field.get(object));
+                newValues.add(getManyToOneColumnNameValue(object.getClass()));
+                newValues.add(field.get(object));
                 entityFieldTypeValues.put(getFieldName(field), new ArrayList<>(Arrays.asList(getIdType(fieldClass), getId(fieldValue))));
             }
             if (hasOneToManyAnnotation(field)) {
-
                 entityFieldTypeValues.put(getFieldName(field), new ArrayList<>(Arrays.asList(fieldType, fieldValue)));
             }
         }
@@ -362,10 +360,10 @@ public class EntityUtils {
 
     public static <T> ResultSet
     updateResultSetExecution(T o, ResultSet rs,
-                             Map<String, Object> associatedManyToOneEntities, Map<String, Object> associatedOneToManyEntities) throws
+                             List<Object> newValues, List<Object> oldValues) throws
             IllegalAccessException, SQLException, ClassNotFoundException {
         Map<String, List<Object>> dataFromDB = collectRecordColumnTypeValues(rs);
-        Map<String, List<Object>> dataFromEntity = collectEntityFieldTypeValues(o, associatedManyToOneEntities);
+        Map<String, List<Object>> dataFromEntity = collectEntityFieldTypeValues(o, newValues);
         Map<String, Object> updateMap = new HashMap<>();
         out.println("------------------------------------");
         out.println("------dataFromDB--------");
@@ -382,9 +380,21 @@ public class EntityUtils {
             if (dataFromEntity.containsKey(columnName) && !columnName.equals(getIdFieldName(o.getClass()))) {
                 updateMap.replace(columnName, dataFromDB.get(columnName).get(1), dataFromEntity.get(columnName).get(1));
             }
+            if((columnName.endsWith("_id") && dataFromDB.containsKey(columnName))){
+                oldValues.add(dataFromDB.get(columnName).get(1));
+                oldValues.add(o.getClass());
+            }
+            if((columnName.endsWith("id") && dataFromEntity.values().contains("list"))){
+                oldValues.add(dataFromDB.get(columnName).get(1));
+                oldValues.add(dataFromEntity.values().toArray()[1]);
+            }
             rs.updateObject(columnName, updateMap.get(columnName));
         }
         updateMap.forEach((key, value) -> out.println(key + " : " + value));
+        out.println("--------associateOneToManyOldValue----------");
+        out.println(oldValues);
+        out.println("------------------------????----------");
+
         return rs;
     }
 
@@ -396,6 +406,15 @@ public class EntityUtils {
         }
         setOneToManyCollection(o, newList);
 
+    }
+
+    public static <T> void updateNewRecordFromAssociatedOneToManyCollection(ORManagerImpl orManager, T o) throws IllegalAccessException, SQLException, ORMException {
+        List<?> list = getOneToManyCollection(o);
+        List newList = new ArrayList<>();
+        for (int i = 0; i < list.size(); i++) {
+            newList.add(orManager.merge(list.get(i)));
+        }
+        setOneToManyCollection(o, newList);
     }
 
     private static void setOneToManyCollection(Object o, List<?> newList) throws IllegalAccessException {
@@ -447,15 +466,16 @@ public class EntityUtils {
         }
     }
 
-    public static <T> void updateNewRecordToAssociatedManyToOneCollection(T o, ResultSet rs, Map<String, Object> associatedManyToOneEntities) throws SQLException, IllegalAccessException {
+    public static <T> void updateNewRecordToAssociatedManyToOneCollection(T o, ResultSet rs, List<Object> associatedManyToOneEntities) throws SQLException, IllegalAccessException {
         ResultSetMetaData resultSetMetaData = rs.getMetaData();
         int columnCount = resultSetMetaData.getColumnCount();
         for (int i = 1; i <= columnCount; i++) {
-            if (associatedManyToOneEntities.containsKey(resultSetMetaData.getColumnName(i).toLowerCase())) {
-                Object associateEntity = associatedManyToOneEntities.get(resultSetMetaData.getColumnName(i).toLowerCase());
+            if (associatedManyToOneEntities.get(0).equals(resultSetMetaData.getColumnName(i).toLowerCase())) {
+                Object associateEntity = associatedManyToOneEntities.get(0);
                 Field[] fields = associateEntity.getClass().getDeclaredFields();
+                out.println(Arrays.toString(fields));
                 for (Field field : fields) {
-                    field.setAccessible(true);
+//                    field.setAccessible(true);
                     if (EntityUtils.hasOneToManyAnnotation(field)) {
                         if (Objects.equals(field.getType().getName(), "java.util.Set") && field.get(associateEntity) != null) {
                             Set<T> fieldValue = (Set<T>) field.get(associateEntity);
