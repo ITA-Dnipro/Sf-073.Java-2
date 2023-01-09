@@ -133,7 +133,6 @@ public class ORManagerImpl implements ORManager {
     private <T> Optional<T> createEntity(Class<T> cls, ResultSet resultSet) throws ORMException {
         try {
             if (!resultSet.next()) {
-                LOGGER.info(String.format("%s with that ID doesnt exist", cls.getSimpleName()));
                 return Optional.empty();
             }
         } catch (SQLException exception) {
@@ -286,21 +285,21 @@ public class ORManagerImpl implements ORManager {
     }
 
     private void dropConstraint(Object o, Object idValue) {
-        String sqlDropFKQuery = null;
+
 
         Field[] declaredFields = o.getClass().getDeclaredFields();
         for (Field field : declaredFields) {
             if (field.isAnnotationPresent(OneToMany.class)) {
-                sqlDropFKQuery = String.format("DELETE FROM %s WHERE %s = %s;", field.getName().toUpperCase(),
+                String sqlDropFKQuery = String.format("DELETE FROM %s WHERE %s = %s;", field.getName().toUpperCase(),
                         o.getClass().getSimpleName().toLowerCase() + "_" + o.getClass().getDeclaredFields()[0].getName().toLowerCase(), idValue);
+                try {
+                    PreparedStatement preparedStatement = this.connection.prepareStatement(sqlDropFKQuery);
+                    preparedStatement.execute();
+                    LOGGER.debug("Dropped constraint");
+                } catch (SQLException exception) {
+                    LOGGER.error("No constraints found", new ORMException(exception.getMessage()));
+                }
             }
-        }
-        try {
-            PreparedStatement preparedStatement = this.connection.prepareStatement(sqlDropFKQuery);
-            preparedStatement.execute();
-            LOGGER.debug("Dropped constraint");
-        } catch (SQLException exception) {
-            LOGGER.error("No constraints found", new ORMException(exception.getMessage()));
         }
     }
 }
