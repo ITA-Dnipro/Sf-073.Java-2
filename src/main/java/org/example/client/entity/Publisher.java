@@ -13,13 +13,13 @@ public class Publisher {
     private String name;
 
     @OneToMany(mappedBy = "publishers")
-    private Set<Book> books;
+    private List<Book> books;
 
     public Publisher() {
     }
 
     public Publisher(String name) {
-        this.books = new HashSet<>();
+        this.books = new ArrayList<>();
         this.name = name;
     }
 
@@ -39,11 +39,11 @@ public class Publisher {
         this.name = name;
     }
 
-    public Set<Book> getBooks() {
+    public List<Book> getBooks() {
         return books;
     }
 
-    public void setBooks(Set<Book> books) {
+    public void setBooks(List<Book> books) {
         this.books = books;
     }
 

@@ -14,6 +14,8 @@ import java.util.*;
 import java.time.LocalDate;
 import java.util.stream.Collectors;
 
+import static java.lang.System.out;
+
 public class EntityUtils {
 
     private static final String ID = " BIGINT PRIMARY KEY AUTO_INCREMENT";
@@ -206,9 +208,9 @@ public class EntityUtils {
             field.setAccessible(true);
             if (field.isAnnotationPresent(OneToMany.class)) {
                 if (field.get(o) == null) {
-                    return set;
+                    return list;
                 } else {
-                    set = (Set<?>) field.get(o);
+                    list = (List<?>) field.get(o);
                 }
             }
         }
@@ -360,8 +362,7 @@ public class EntityUtils {
 
     public static <T> ResultSet
     updateResultSetExecution(T o, ResultSet rs,
-                             Map<Class<?>, Long> dbReferenceId,
-                             Map<String, Object> associatedManyToOneEntities) throws
+                             Map<String, Object> associatedManyToOneEntities, Map<String, Object> associatedOneToManyEntities) throws
             IllegalAccessException, SQLException, ClassNotFoundException {
         Map<String, List<Object>> dataFromDB = collectRecordColumnTypeValues(rs);
         Map<String, List<Object>> dataFromEntity = collectEntityFieldTypeValues(o, associatedManyToOneEntities);
@@ -388,21 +389,21 @@ public class EntityUtils {
     }
 
     public static <T> void saveNewRecordFromAssociatedOneToManyCollection(ORManagerImpl orManager, T o) throws IllegalAccessException, SQLException, ORMException {
-        Set<?> oldSet = getOneToManyCollection(o);
-        Set<Object> newSet = new HashSet<>();
-        for (Object obj : oldSet) {
-            newSet.add(orManager.save(obj));
+        List<?> list = getOneToManyCollection(o);
+        List newList = new ArrayList<>();
+        for (int i = 0; i < list.size(); i++) {
+            newList.add(orManager.save(list.get(i)));
         }
         setOneToManyCollection(o, newList);
 
     }
 
-    private static void setOneToManyCollection(Object o, List newList) throws IllegalAccessException {
+    private static void setOneToManyCollection(Object o, List<?> newList) throws IllegalAccessException {
         Field[] fields = o.getClass().getDeclaredFields();
         for (Field field : fields) {
             field.setAccessible(true);
             if (field.isAnnotationPresent(OneToMany.class)) {
-                field.set(o, newSet);
+                field.set(o, newList);
             }
         }
     }

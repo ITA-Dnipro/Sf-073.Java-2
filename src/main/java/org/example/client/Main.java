@@ -53,7 +53,7 @@ public class Main {
         Book book101 = new Book("Book101@OneToMany101", LocalDate.now());
         Book book202 = new Book("Book202@OneToMany101", LocalDate.now());
         Book book303 = new Book("Book303@OneToMany101", LocalDate.now());
-        publisher101.setBooks(Set.of(book101, book202, book303));
+        publisher101.setBooks(List.of(book101, book202, book303));
         Publisher publisherRecord1 = orManager.save(publisher101);
         out.println(publisherRecord1);
         out.println(publisherRecord1.getBooks());
@@ -62,7 +62,7 @@ public class Main {
         Book book404 = new Book("Book404@OneToMany202", LocalDate.now(), publisher202);
         Book book505 = new Book("Book505@OneToMany202", LocalDate.now(), publisher202);
         Book book606 = new Book("Book606@OneToMany202", LocalDate.now(), publisher202);
-        publisher202.setBooks(Set.of(book404, book505, book606));
+        publisher202.setBooks(List.of(book404, book505, book606));
         Publisher publisherRecord2 = orManager.save(publisher202);
         out.println("Print Publisher@OneToMany202:");
         out.println(publisherRecord2);
@@ -73,7 +73,7 @@ public class Main {
         Book book7 = new Book("Book707@OneToMany303", LocalDate.now(), publisher303);
         Book book8 = new Book("Book808@OneToMany303", LocalDate.now(), publisher303);
         Book book9 = new Book("Book909@OneToMany303", LocalDate.now(), publisher303);
-        publisher303.setBooks(Set.of(book7, book8, book9));
+        publisher303.setBooks(List.of(book7, book8, book9));
         Publisher publisher404 = new Publisher(publisher303.getName().replace('3', '4'));
         publisher404.setBooks(publisher303.getBooks());
         Publisher publisher505 = orManager.save(publisher404);
