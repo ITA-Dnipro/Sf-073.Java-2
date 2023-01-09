@@ -23,7 +23,7 @@ public class EntityUtils {
     private EntityUtils() {
     }
 
-    public static void buildingSqlCreateTable(Field[] declaredFields, ArrayList<String> sql) {
+    public static void buildSqlCreateTable(Field[] declaredFields, ArrayList<String> sql) {
         for (Field field : declaredFields) {
             Class<?> fieldType = field.getType();
             if (field.isAnnotationPresent(Id.class)) {
@@ -86,8 +86,7 @@ public class EntityUtils {
     public static void setColumnType(ArrayList<String> sql, Class<?> type, String name) {
         if (type == Long.class) {
             sql.add(name + ID);
-        }
-        if (type == String.class) {
+        } else if (type == String.class) {
             sql.add(name + NAME);
         } else if (type == LocalDate.class) {
             sql.add(name + DATE);
@@ -530,22 +529,22 @@ public class EntityUtils {
                     fieldValue = resultSet.getString(fieldName);
                     if (fieldValue != null) {
                         Class<?> fieldType = field.getType();
-                        Object o = fieldType.getConstructor().newInstance();
-                        String publisherTableName = o.getClass().getAnnotation(Table.class).name();
-                        String findPublisherQuery = "select * from " + publisherTableName + " where id = " + fieldValue;
                         Object publisher = fieldType.getConstructor().newInstance();
+                        String publisherTableName = publisher.getClass().getAnnotation(Table.class).name();
+                        String findPublisherQuery = "select * from " + publisherTableName + " where id = " + fieldValue;
                         String booksField = "";
                         Class<?> booksFieldType = null;
                         for (Field publisherField : publisher.getClass().getDeclaredFields()) {
-                            ResultSet rs = connection.prepareStatement(findPublisherQuery).executeQuery();
-                            while (rs.next()) {
-                                String f = getFieldName(publisherField);
-                                if (!publisherField.isAnnotationPresent(OneToMany.class)) {
-                                    String v = rs.getString(f);
-                                    fillData(publisher, publisherField, v);
-                                } else {
-                                    booksField = publisherField.getName();
-                                    booksFieldType = publisherField.getType();
+                            try (ResultSet rs = connection.prepareStatement(findPublisherQuery).executeQuery()) {
+                                while (rs.next()) {
+                                    String name = getFieldName(publisherField);
+                                    if (!publisherField.isAnnotationPresent(OneToMany.class)) {
+                                        String value = rs.getString(name);
+                                        fillData(publisher, publisherField, value);
+                                    } else {
+                                        booksField = name;
+                                        booksFieldType = publisherField.getType();
+                                    }
                                 }
                             }
                         }
@@ -590,12 +589,12 @@ public class EntityUtils {
             List<Object> booksList = new ArrayList<>();
             String getBook = "select * from " + booksField + " where " + fieldName + " = " + fieldValue;
             Object bookToAdd = entity.getClass().getConstructor().newInstance();
-            try (ResultSet rs = connection.prepareStatement(getBook).executeQuery()) {
-                while (rs.next()) {
+            try (ResultSet resultSet = connection.prepareStatement(getBook).executeQuery()) {
+                while (resultSet.next()) {
                     for (Field bookField : bookToAdd.getClass().getDeclaredFields()) {
                         String name = getFieldName(bookField);
-                        String val = rs.getString(name);
-                        fillData(bookToAdd, bookField, val);
+                        String value = resultSet.getString(name);
+                        fillData(bookToAdd, bookField, value);
                     }
                     booksList.add(bookToAdd);
                     bookToAdd = entity.getClass().getConstructor().newInstance();
@@ -613,9 +612,9 @@ public class EntityUtils {
             for (Field bookField : book.getClass().getDeclaredFields()) {
                 ResultSet rs2 = connection.prepareStatement(findBookQuery).executeQuery();
                 while (rs2.next()) {
-                    String f = getFieldName(bookField);
-                    String v = rs2.getString(f);
-                    fillData(book, bookField, v);
+                    String name = getFieldName(bookField);
+                    String value = rs2.getString(name);
+                    fillData(book, bookField, value);
                 }
             }
         } catch (SQLException exception) {
