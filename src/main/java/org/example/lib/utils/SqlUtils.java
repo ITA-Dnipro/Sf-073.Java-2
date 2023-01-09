@@ -50,6 +50,14 @@ public class SqlUtils {
                 " = " + id;
     }
 
+    public static String findByIdManyToOne(Long id, Class<?> cls, String column_id) {
+        return SELECT_ALL_FROM +
+                EntityUtils.getTableName(cls) +
+                " WHERE " +
+                EntityUtils.getTableName(cls) + "." + column_id +
+                " = " + id;
+    }
+
     public static String selectFirstFromTable(Class<?> cls) {
         return SELECT_ALL_FROM +
                 EntityUtils.getTableName(cls) +
