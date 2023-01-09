@@ -13,15 +13,29 @@ import java.time.LocalDate;
 import java.util.stream.Collectors;
 
 public class EntityUtils {
-
+    private static final String FOREIGN_KEY = " FOREIGN KEY (%s) REFERENCES %s(%s)";
     private static final String ID = " BIGINT PRIMARY KEY AUTO_INCREMENT";
     private static final String NAME = " VARCHAR(255) UNIQUE NOT NULL";
     private static final String DATE = " DATE NOT NULL";
     private static final String LONG = " BIGINT NOT NULL";
-
     private final static Logger LOGGER = LoggerFactory.getLogger(EntityUtils.class);
 
     private EntityUtils() {
+    }
+
+    public static void buildingSqlCreateTable(Field[] declaredFields, ArrayList<String> sql) {
+        for (Field field : declaredFields) {
+            Class<?> fieldType = field.getType();
+            if (field.isAnnotationPresent(Id.class)) {
+                EntityUtils.setColumnType(sql, fieldType, EntityUtils.getFieldName(field));
+            } else if (field.isAnnotationPresent(Column.class)) {
+                EntityUtils.setColumnType(sql, fieldType, EntityUtils.getFieldName(field));
+            } else if (field.isAnnotationPresent(ManyToOne.class)) {
+                String fieldName = EntityUtils.getFieldName(field);
+                sql.add(fieldName + " BIGINT");
+                sql.add(String.format(FOREIGN_KEY, fieldName, field.getName() + "s", "id"));
+            }
+        }
     }
 
     public static String getTableName(Class<?> cls) {
@@ -84,17 +98,17 @@ public class EntityUtils {
 
     public static String getFieldsWithoutId(Object o) {
         return Arrays.stream(o.getClass()
-                        .getDeclaredFields())
-                .filter(f -> f.getDeclaredAnnotation(Column.class) != null)
-                .map(f -> {
-                    String name = f.getAnnotation(Column.class).name();
-                    if (!name.equals("")) {
-                        return name;
-                    } else {
-                        return f.getName();
-                    }
-                })
-                .collect(Collectors.joining(","));
+                              .getDeclaredFields())
+                     .filter(f -> f.getDeclaredAnnotation(Column.class) != null)
+                     .map(f -> {
+                         String name = f.getAnnotation(Column.class).name();
+                         if (!name.equals("")) {
+                             return name;
+                         } else {
+                             return f.getName();
+                         }
+                     })
+                     .collect(Collectors.joining(","));
     }
 
     public static <T> boolean hasId(T o) {
@@ -244,7 +258,7 @@ public class EntityUtils {
                     String fieldType = field.getType().getName();
                     String columnTypeClassName = resultSetMetaData.getColumnClassName(i);
                     EntityUtils.normalizeSqlToJavaTypesWithValues(collectFieldTypeValues, columnTypeClassName,
-                            fieldType, field, o);
+                                                                  fieldType, field, o);
                 }
                 if (hasManyToOneAnnotation(field)) {
                     if (field.get(o) == null) {
@@ -255,7 +269,7 @@ public class EntityUtils {
                         String fieldTypePretty = "entity";
                         String columnTypeClassName = resultSetMetaData.getColumnClassName(i);
                         EntityUtils.normalizeSqlToJavaTypesWithValues(collectFieldTypeValues, columnTypeClassName,
-                                fieldTypePretty, field, o);
+                                                                      fieldTypePretty, field, o);
                     }
                 }
             }
@@ -277,21 +291,21 @@ public class EntityUtils {
 
         if (columnTypeClassName.equals(fieldRawType) && columnTypeClassName.equals("java.lang.String")) {
             collectFieldTypeValues.put(EntityUtils.getFieldName(field),
-                    new ArrayList<>(Arrays.asList("java.lang.String", field.get(o))));
+                                       new ArrayList<>(Arrays.asList("java.lang.String", field.get(o))));
         }
         if (columnTypeClassName.equals("java.sql.Date") && fieldRawType.equals("java.time.LocalDate")) {
             collectFieldTypeValues.put(EntityUtils.getFieldName(field),
-                    new ArrayList<>(Arrays.asList("java.sql.Date", field.get(o))));
+                                       new ArrayList<>(Arrays.asList("java.sql.Date", field.get(o))));
         }
         if (columnTypeClassName.equals(fieldRawType) && columnTypeClassName.equals("java.lang.Long")) {
             collectFieldTypeValues.put(EntityUtils.getFieldName(field),
-                    new ArrayList<>(Arrays.asList("java.lang.Long", field.get(o))));
+                                       new ArrayList<>(Arrays.asList("java.lang.Long", field.get(o))));
         }
         if (columnTypeClassName.equals("java.lang.Long") && fieldRawType.equals("entity")) {
             Object associatedObject = field.get(o);
             Long id = EntityUtils.getId(associatedObject);
             collectFieldTypeValues.put(EntityUtils.getFieldName(field),
-                    new ArrayList<>(Arrays.asList("java.lang.Long", id)));
+                                       new ArrayList<>(Arrays.asList("java.lang.Long", id)));
         }
         return collectFieldTypeValues;
     }
@@ -342,11 +356,11 @@ public class EntityUtils {
             if (hasManyToOneAnnotation(field)) {
                 Class<?> fieldClass = fieldValue.getClass();
                 entityFieldTypeValues.put(getOneToManyMappedByValue(fieldClass),
-                        new ArrayList<>(Arrays.asList(getIdType(fieldClass), fieldValue)));
+                                          new ArrayList<>(Arrays.asList(getIdType(fieldClass), fieldValue)));
             }
             if (hasOneToManyAnnotation(field)) {
                 entityFieldTypeValues.put(getTableNameFromGenericTypeOneToMany(field),
-                        new ArrayList<>(Arrays.asList(fieldType, fieldValue)));
+                                          new ArrayList<>(Arrays.asList(fieldType, fieldValue)));
             }
         }
         return entityFieldTypeValues;
@@ -391,9 +405,9 @@ public class EntityUtils {
 
     public static Field getIdColumn(Class<?> aClass) {
         return Arrays.stream(aClass.getDeclaredFields())
-                .filter(f -> f.isAnnotationPresent(Id.class))
-                .findFirst()
-                .orElseThrow(() -> new UnsupportedOperationException("Entity is missing an Id column"));
+                     .filter(f -> f.isAnnotationPresent(Id.class))
+                     .findFirst()
+                     .orElseThrow(() -> new UnsupportedOperationException("Entity is missing an Id column"));
     }
 
     public static String getSQLColumName(Field idField) {
@@ -428,6 +442,58 @@ public class EntityUtils {
         }
     }
 
+    public static <T> Optional<T> createEntity(Class<T> cls, ResultSet resultSet) throws ORMException {
+        try {
+            if (!resultSet.next()) {
+                LOGGER.info(String.format("%s with that ID doesnt exist", cls.getSimpleName()));
+                return Optional.empty();
+            }
+        } catch (SQLException exception) {
+            throw new ORMException(exception.getMessage());
+        }
+
+        String fieldName = null;
+        T entity;
+        try {
+            entity = cls.getDeclaredConstructor().newInstance();
+
+            Field[] declaredFields = cls.getDeclaredFields();
+            for (Field declaredField : declaredFields) {
+                if (!declaredField.isAnnotationPresent(Column.class) &&
+                        !declaredField.isAnnotationPresent(Id.class) &&
+                        !declaredField.isAnnotationPresent(ManyToOne.class)) {
+                    continue;
+                }
+
+                if (declaredField.isAnnotationPresent(Column.class)) {
+                    Column annotation = declaredField.getAnnotation(Column.class);
+                    if (!annotation.name().equals("")) {
+                        fieldName = annotation.name();
+                    } else {
+                        fieldName = declaredField.getName();
+                    }
+                } else if (declaredField.isAnnotationPresent(Id.class)) {
+                    fieldName = declaredField.getName();
+                } else if (declaredField.isAnnotationPresent(ManyToOne.class)) {
+                    ManyToOne annotation = declaredField.getAnnotation(ManyToOne.class);
+                    if (!annotation.columnName().equals("")) {
+                        fieldName = annotation.columnName();
+                    } else {
+                        fieldName = declaredField.getName();
+                    }
+                }
+
+
+                String value = resultSet.getString(fieldName);
+                entity = fillData(entity, declaredField, value);
+            }
+        } catch (NoSuchMethodException | IllegalAccessException | SQLException | InvocationTargetException |
+                InstantiationException exception) {
+            LOGGER.error("Cannot create entity");
+            throw new ORMException(exception.getMessage());
+        }
+        return Optional.of(entity);
+    }
 
     public static <T> T fillData(T entity, Field field, String value) {
         field.setAccessible(true);
@@ -443,7 +509,7 @@ public class EntityUtils {
             }
         } catch (IllegalAccessException exception) {
             LOGGER.error(String.format("Unsupported type %s", field.getType()),
-                    new UnsupportedTypeException(exception.getMessage()));
+                         new UnsupportedTypeException(exception.getMessage()));
         }
         return entity;
     }
@@ -537,7 +603,8 @@ public class EntityUtils {
             }
             books.set(publisher, booksList);
         } catch (Exception exception) {
-            LOGGER.error(String.format("Cannot Add %s to %s", entity.getClass().getSimpleName(), booksField), new ORMException(exception.getMessage()));
+            LOGGER.error(String.format("Cannot Add %s to %s", booksField, entity.getClass().getSimpleName()),
+                         new ORMException(exception.getMessage()));
         }
     }
 
@@ -552,7 +619,8 @@ public class EntityUtils {
                 }
             }
         } catch (SQLException exception) {
-            LOGGER.error(String.format("Cannot map %s to Book", book.getClass().getSimpleName()), new ORMException(exception.getMessage()));
+            LOGGER.error(String.format("Cannot map %s to Book", book.getClass().getSimpleName()),
+                         new ORMException(exception.getMessage()));
         }
     }
 
@@ -567,7 +635,8 @@ public class EntityUtils {
             }
             book = actualTypeArgument.getConstructor().newInstance();
         } catch (Exception exception) {
-            LOGGER.error(String.format("Cannot get %s in this object", booksField.getGenericType()), new ORMException(exception.getMessage()));
+            LOGGER.error(String.format("Cannot get %s in this object", booksField.getGenericType()),
+                         new ORMException(exception.getMessage()));
         }
         return book;
     }

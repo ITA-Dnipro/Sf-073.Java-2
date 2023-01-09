@@ -13,7 +13,6 @@ public class Publisher {
     private Long id;
     @Column()
     private String name;
-
     @OneToMany(mappedBy = "publishers")
     private List<Book> books;
 
@@ -54,7 +53,7 @@ public class Publisher {
         StringJoiner sj = new StringJoiner(", ", Publisher.class.getSimpleName() + "[", "]")
                 .add("id = " + id)
                 .add("name = '" + name + "'");
-        if (books!= null && books.size() > 0 && getId() != null) {
+        if (books != null && getId() != null) {
             sj.add("book ids: ");
             books.forEach(b -> sj.add(b.getId().toString()));
         }

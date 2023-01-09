@@ -83,5 +83,27 @@ public class Main {
         orManager.findAll(Publisher.class).forEach(out::println);
         out.println(SEPARATOR);
         out.println(orManager.findById(11, Book.class));
+        out.println(SEPARATOR);
+
+        out.println("Book before changes: ");
+        Book bookToChange = orManager.findById(8, Book.class).get();
+        out.println(bookToChange);
+        bookToChange.setTitle("new title");
+        bookToChange.setPublishedAt(LocalDate.of(1990, 4, 4));
+        out.println("Book after changes: ");
+        out.println(bookToChange);
+        Book refreshBook = orManager.refresh(bookToChange);
+        out.println("Refreshed book: ");
+        out.println(refreshBook);
+        out.println(SEPARATOR);
+        out.println("Publisher before changes: ");
+        Publisher publisherToChange = orManager.findById(5, Publisher.class).get();
+        out.println(publisherToChange);
+        publisherToChange.setName("new name");
+        out.println("Publisher after changes: ");
+        out.println(publisherToChange);
+        Publisher refreshedPublisher = orManager.refresh(publisherToChange);
+        out.println("Refreshed Publisher: ");
+        out.println(refreshedPublisher);
     }
 }

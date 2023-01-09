@@ -23,7 +23,7 @@ public class DBUtils {
         return orManager;
     }
 
-    public static ORManager init() throws ORMException, SQLException {
+    public static void init() throws ORMException, SQLException {
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl("jdbc:h2:file:./src/test/db/test-db");
         dataSource = new HikariDataSource(config);
@@ -34,11 +34,11 @@ public class DBUtils {
         Publisher publisher = new Publisher("Test Publisher");
         orManager.persist(book);
         orManager.persist(publisher);
-        return orManager;
+        orManager.save(new Book("Test book 2", LocalDate.now()));
+        orManager.save(new Publisher("Test Publisher 2"));
     }
 
     public static void clear() throws SQLException {
         dataSource.getConnection().prepareStatement("drop all objects").execute();
-
     }
 }
