@@ -267,6 +267,9 @@ public class ORManagerImpl implements ORManager {
         Field idField = EntityUtils.getIdColumn(o.getClass());
         String idName = EntityUtils.getSQLColumName(idField);
         Object idValue = EntityUtils.getFieldIdValue(o, idField);
+
+        dropConstraint(o, idValue);
+
         String deleteQuery = String.format("DELETE FROM %s WHERE %s = %s", tableName, idName, idValue);
 
         try {
@@ -280,5 +283,24 @@ public class ORManagerImpl implements ORManager {
             LOGGER.error("Cannot delete element with this ID");
         }
         return false;
+    }
+
+    private void dropConstraint(Object o, Object idValue) {
+        String sqlDropFKQuery = null;
+
+        Field[] declaredFields = o.getClass().getDeclaredFields();
+        for (Field field : declaredFields) {
+            if (field.isAnnotationPresent(OneToMany.class)) {
+                sqlDropFKQuery = String.format("DELETE FROM %s WHERE %s = %s;", field.getName().toUpperCase(),
+                        o.getClass().getSimpleName().toLowerCase() + "_" + o.getClass().getDeclaredFields()[0].getName().toLowerCase(), idValue);
+            }
+        }
+        try {
+            PreparedStatement preparedStatement = this.connection.prepareStatement(sqlDropFKQuery);
+            preparedStatement.execute();
+            LOGGER.debug("Dropped constraint");
+        } catch (SQLException exception) {
+            LOGGER.error("No constraints found", new ORMException(exception.getMessage()));
+        }
     }
 }
