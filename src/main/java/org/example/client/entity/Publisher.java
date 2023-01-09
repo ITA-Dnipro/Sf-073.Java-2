@@ -52,9 +52,9 @@ public class Publisher {
         StringJoiner sj = new StringJoiner(", ", Publisher.class.getSimpleName() + "[", "]")
                 .add("id = " + id)
                 .add("name = '" + name + "'");
-        if (books!= null && books.size() > 0 && getId() != null) {
+        if (books!= null && !books.isEmpty()) {
             sj.add("book ids: ");
-            books.forEach(b -> sj.add(b.getId().toString()));
+            books.forEach(b -> sj.add(String.valueOf(b.getId())));
         }
         return sj.toString();
     }
